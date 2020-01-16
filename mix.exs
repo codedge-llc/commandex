@@ -6,10 +6,40 @@ defmodule Commandex.MixProject do
   def project do
     [
       app: :commandex,
-      deps: [],
+      deps: deps(),
+      description: description(),
       elixir: "~> 1.9",
+      elixirc_paths: elixirc_paths(Mix.env()),
+      name: "Commandex",
+      package: package(),
+      source_url: "https://github.com/codedge-llc/commandex",
       start_permanent: Mix.env() == :prod,
       version: @version
+    ]
+  end
+
+  defp deps do
+    [
+      {:credo, "~> 1.0", only: [:dev, :test], runtime: false}
+    ]
+  end
+
+  defp elixirc_paths(:dev), do: ["lib", "test/support"]
+  defp elixirc_paths(:test), do: ["lib", "test/support"]
+  defp elixirc_paths(_), do: ["lib"]
+
+  defp description do
+    """
+    Make complex actions a first-class data type.
+    """
+  end
+
+  defp package do
+    [
+      files: ["lib", "mix.exs", "README*", "LICENSE*"],
+      maintainers: ["Henry Popp"],
+      licenses: ["MIT"],
+      links: %{"GitHub" => "https://github.com/codedge-llc/commandex"}
     ]
   end
 

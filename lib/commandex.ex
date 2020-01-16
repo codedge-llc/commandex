@@ -4,45 +4,65 @@ defmodule Commandex do
   """
 
   @doc false
-  defmacro __using__(_opts) do
+  defmacro command(do: block) do
     prelude =
       quote do
-        # @after_compile Commandex
         Module.register_attribute(__MODULE__, :struct_fields, accumulate: true)
+        Module.register_attribute(__MODULE__, :params, accumulate: true)
+        Module.register_attribute(__MODULE__, :data, accumulate: true)
+        Module.register_attribute(__MODULE__, :pipelines, accumulate: true)
+
         Module.put_attribute(__MODULE__, :struct_fields, {:success, false})
         Module.put_attribute(__MODULE__, :struct_fields, {:error, nil})
         Module.put_attribute(__MODULE__, :struct_fields, {:halted, false})
+
+        try do
+          import Commandex
+          unquote(block)
+        after
+          :ok
+        end
       end
 
     postlude =
       quote unquote: false do
-        params = for key <- Module.get_attribute(__MODULE__, :params), into: %{}, do: {key, nil}
-        data = for key <- Module.get_attribute(__MODULE__, :data), into: %{}, do: {key, nil}
+        params = for pair <- Module.get_attribute(__MODULE__, :params), into: %{}, do: pair
+        data = for pair <- Module.get_attribute(__MODULE__, :data), into: %{}, do: pair
+        pipelines = Module.get_attribute(__MODULE__, :pipelines)
 
         Module.put_attribute(__MODULE__, :struct_fields, {:params, params})
         Module.put_attribute(__MODULE__, :struct_fields, {:data, data})
+        Module.put_attribute(__MODULE__, :struct_fields, {:pipelines, pipelines})
         defstruct @struct_fields
-        import Commandex
+
+        @doc """
+        Creates a new #{__MODULE__} struct from given params.
+        """
+        def new(opts) do
+          Commandex.parse_params(%__MODULE__{}, opts)
+        end
+
+        def run(%unquote(__MODULE__){pipelines: pipelines} = command) do
+          pipelines
+          |> Enum.reduce_while(command, fn fun, acc ->
+            case acc do
+              %{halted: false} -> {:cont, Commandex.apply_fun(command, fun)}
+              _ -> {:halt, acc}
+            end
+          end)
+          |> Commandex.maybe_mark_successful()
+        end
+
+        def run(params) do
+          params
+          |> new()
+          |> run()
+        end
       end
 
     quote do
       unquote(prelude)
       unquote(postlude)
-
-      def new(opts) do
-        Commandex.parse_params(%__MODULE__{}, opts)
-      end
-
-      def run(command) do
-        pipeline()
-        |> Enum.reduce_while(command, fn fun, acc ->
-          case acc do
-            %{halted: false} -> {:cont, fun.(acc, acc.params, acc.data)}
-            _ -> {:halt, acc}
-          end
-        end)
-        |> Commandex.maybe_mark_successful()
-      end
     end
   end
 
@@ -77,5 +97,63 @@ defmodule Commandex do
 
   def halt(command) do
     %{command | halted: true}
+  end
+
+  defmacro param(name, type \\ :string, opts \\ []) do
+    quote do
+      Commandex.__param__(__MODULE__, unquote(name), unquote(type), unquote(opts))
+    end
+  end
+
+  defmacro data(name, type \\ :string, opts \\ []) do
+    quote do
+      Commandex.__data__(__MODULE__, unquote(name), unquote(type), unquote(opts))
+    end
+  end
+
+  defmacro pipeline(name) do
+    quote do
+      Commandex.__pipeline__(__MODULE__, unquote(name))
+    end
+  end
+
+  def __param__(mod, name, _type, _opts) do
+    params = Module.get_attribute(mod, :params)
+
+    if List.keyfind(params, name, 0) do
+      raise ArgumentError, "param #{inspect(name)} is already set on command"
+    end
+
+    Module.put_attribute(mod, :params, {name, nil})
+  end
+
+  def __data__(mod, name, _type, _opts) do
+    data = Module.get_attribute(mod, :data)
+
+    if List.keyfind(data, name, 0) do
+      raise ArgumentError, "data #{inspect(name)} is already set on command"
+    end
+
+    Module.put_attribute(mod, :data, {name, nil})
+  end
+
+  def __pipeline__(mod, name) do
+    Module.put_attribute(mod, :pipelines, name)
+  end
+
+  def apply_fun(%mod{params: params, data: data} = command, name) when is_atom(name) do
+    :erlang.apply(mod, name, [command, params, data])
+  end
+
+  def apply_fun(%{params: params, data: data} = command, fun) when is_function(fun) do
+    fun.(command, params, data)
+  end
+
+  def apply_fun(%{params: params, data: data} = command, {m, f}) do
+    :erlang.apply(m, f, [command, params, data])
+  end
+
+  def apply_fun(%{params: params, data: data} = command, {m, f, a}) do
+    :erlang.apply(m, f, [command, params, data] ++ a)
   end
 end
