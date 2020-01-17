@@ -7,14 +7,13 @@ defmodule Commandex do
   defmacro command(do: block) do
     prelude =
       quote do
-        Module.register_attribute(__MODULE__, :struct_fields, accumulate: true)
-        Module.register_attribute(__MODULE__, :params, accumulate: true)
-        Module.register_attribute(__MODULE__, :data, accumulate: true)
-        Module.register_attribute(__MODULE__, :pipelines, accumulate: true)
+        for name <- [:struct_fields, :params, :data, :pipelines] do
+          Module.register_attribute(__MODULE__, name, accumulate: true)
+        end
 
-        Module.put_attribute(__MODULE__, :struct_fields, {:success, false})
-        Module.put_attribute(__MODULE__, :struct_fields, {:error, nil})
-        Module.put_attribute(__MODULE__, :struct_fields, {:halted, false})
+        for field <- [{:success, false}, {:error, nil}, {:halted, false}] do
+          Module.put_attribute(__MODULE__, :struct_fields, field)
+        end
 
         try do
           import Commandex
@@ -91,13 +90,9 @@ defmodule Commandex do
     %{command | data: Map.put(data, key, val)}
   end
 
-  def put_error(command, error) do
-    %{command | error: error}
-  end
+  def put_error(command, error), do: %{command | error: error}
 
-  def halt(command) do
-    %{command | halted: true}
-  end
+  def halt(command), do: %{command | halted: true}
 
   defmacro param(name, type \\ :string, opts \\ []) do
     quote do
