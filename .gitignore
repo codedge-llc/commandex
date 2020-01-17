@@ -23,3 +23,4 @@ erl_crash.dump
 commandex-*.tar
 
 .iex.exs
+*.swp

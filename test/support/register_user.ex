@@ -18,7 +18,7 @@ defmodule Commandex.RegisterUser do
 
   def create_user(command, %{password: nil} = _params, _data) do
     command
-    |> put_error(:no_password)
+    |> put_error(:password, :not_given)
     |> halt()
   end
 

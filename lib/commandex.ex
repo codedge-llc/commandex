@@ -3,7 +3,19 @@ defmodule Commandex do
   Documentation for Commandex.
   """
 
-  @doc false
+  @type command :: %{
+          __struct__: atom,
+          data: map,
+          error: map,
+          halted: boolean,
+          params: map,
+          success: boolean
+        }
+
+  @doc """
+  Defines a command struct with params, data, and pipelines.
+  """
+  @spec command(do: any) :: no_return
   defmacro command(do: block) do
     prelude =
       quote do
@@ -11,7 +23,7 @@ defmodule Commandex do
           Module.register_attribute(__MODULE__, name, accumulate: true)
         end
 
-        for field <- [{:success, false}, {:error, nil}, {:halted, false}] do
+        for field <- [{:success, false}, {:error, %{}}, {:halted, false}] do
           Module.put_attribute(__MODULE__, :struct_fields, field)
         end
 
@@ -65,6 +77,127 @@ defmodule Commandex do
     end
   end
 
+  @doc """
+  Defines a command parameter field.
+
+  Parameters are supplied at struct creation, before any pipelines are run.
+
+      command do
+        param :email
+        param :password
+
+        # ...data
+        # ...pipelines
+      end
+  """
+  @spec param(atom) :: no_return
+  defmacro param(name) do
+    quote do
+      Commandex.__param__(__MODULE__, unquote(name))
+    end
+  end
+
+  @doc """
+  Defines a command data field.
+
+  Data field values are created and set as pipelines are run. Set one with `put_data/3`.
+
+      command do
+        # ...params
+
+        data :password_hash
+        data :user
+
+        # ...pipelines
+      end
+  """
+  @spec data(atom) :: no_return
+  defmacro data(name) do
+    quote do
+      Commandex.__data__(__MODULE__, unquote(name))
+    end
+  end
+
+  @doc """
+  Defines a command pipeline.
+
+  Pipelines are functions executed against the command, *in the order in which they are defined*.
+
+  For example, two pipelines could be defined:
+    
+      pipeline :check_email_valid
+      pipeline :create_user
+
+  Which could be mentally interpreted as:
+
+      command
+      |> check_valid_email()
+      |> create_user()
+
+  A pipeline function must be of arity three (command, params, data), but can be defined multiple ways:
+
+      pipline :create_user # The name of a function inside the command's module
+      pipeline &YourModule.create_user/3
+      pipeline {YourModule, :create_user} 
+  """
+  @spec pipeline(atom) :: no_return
+  defmacro pipeline(name) do
+    quote do
+      Commandex.__pipeline__(__MODULE__, unquote(name))
+    end
+  end
+
+  @doc """
+  Sets a data field with given value.
+
+  Define a data field first:
+
+      data :password_hash
+
+  Set the password pash in one of your pipeline functions:
+
+      def hash_password(command, %{password: password} = _params, _data) do
+        # Better than plaintext, I guess
+        put_data(command, :password_hash, Base.encode64(password))
+      end
+  """
+  @spec put_data(command, atom, any) :: command
+  def put_data(%{data: data} = command, key, val) do
+    %{command | data: Map.put(data, key, val)}
+  end
+
+  @doc """
+  Sets an error for given key and value.
+
+  `:error` is a map. Putting an error on the same key will overwrite the previous value.
+
+      def hash_password(command, %{password: nil} = _params, _data) do
+        command
+        |> put_error(:password, :not_supplied)
+        |> halt()
+      end
+  """
+  @spec put_error(command, any, any) :: command
+  def put_error(%{error: error} = command, key, val) do
+    %{command | error: Map.put(error, key, val)}
+  end
+
+  @doc """
+  Halts a command pipeline.
+
+  Any pipelines defined after the halt will be ignored. If a command finishes running through
+  all pipelines, `:success` will be set to `true`.
+
+      def hash_password(command, %{password: nil} = _params, _data) do
+        command
+        |> put_error(:password, :not_supplied)
+        |> halt()
+      end
+  """
+  @spec halt(command) :: command
+  def halt(command), do: %{command | halted: true}
+
+  @doc false
   def maybe_mark_successful(%{halted: false} = command), do: %{command | success: true}
   def maybe_mark_successful(command), do: command
 
@@ -79,63 +212,7 @@ defmodule Commandex do
     %{struct | params: params}
   end
 
-  defp get_param(params, key) do
-    case Map.get(params, key) do
-      nil -> Map.get(params, to_string(key))
-      val -> val
-    end
-  end
-
-  def put_data(%{data: data} = command, key, val) do
-    %{command | data: Map.put(data, key, val)}
-  end
-
-  def put_error(command, error), do: %{command | error: error}
-
-  def halt(command), do: %{command | halted: true}
-
-  defmacro param(name, type \\ :string, opts \\ []) do
-    quote do
-      Commandex.__param__(__MODULE__, unquote(name), unquote(type), unquote(opts))
-    end
-  end
-
-  defmacro data(name, type \\ :string, opts \\ []) do
-    quote do
-      Commandex.__data__(__MODULE__, unquote(name), unquote(type), unquote(opts))
-    end
-  end
-
-  defmacro pipeline(name) do
-    quote do
-      Commandex.__pipeline__(__MODULE__, unquote(name))
-    end
-  end
-
-  def __param__(mod, name, _type, _opts) do
-    params = Module.get_attribute(mod, :params)
-
-    if List.keyfind(params, name, 0) do
-      raise ArgumentError, "param #{inspect(name)} is already set on command"
-    end
-
-    Module.put_attribute(mod, :params, {name, nil})
-  end
-
-  def __data__(mod, name, _type, _opts) do
-    data = Module.get_attribute(mod, :data)
-
-    if List.keyfind(data, name, 0) do
-      raise ArgumentError, "data #{inspect(name)} is already set on command"
-    end
-
-    Module.put_attribute(mod, :data, {name, nil})
-  end
-
-  def __pipeline__(mod, name) do
-    Module.put_attribute(mod, :pipelines, name)
-  end
-
+  @doc false
   def apply_fun(%mod{params: params, data: data} = command, name) when is_atom(name) do
     :erlang.apply(mod, name, [command, params, data])
   end
@@ -150,5 +227,36 @@ defmodule Commandex do
 
   def apply_fun(%{params: params, data: data} = command, {m, f, a}) do
     :erlang.apply(m, f, [command, params, data] ++ a)
+  end
+
+  def __param__(mod, name) do
+    params = Module.get_attribute(mod, :params)
+
+    if List.keyfind(params, name, 0) do
+      raise ArgumentError, "param #{inspect(name)} is already set on command"
+    end
+
+    Module.put_attribute(mod, :params, {name, nil})
+  end
+
+  def __data__(mod, name) do
+    data = Module.get_attribute(mod, :data)
+
+    if List.keyfind(data, name, 0) do
+      raise ArgumentError, "data #{inspect(name)} is already set on command"
+    end
+
+    Module.put_attribute(mod, :data, {name, nil})
+  end
+
+  def __pipeline__(mod, name) do
+    Module.put_attribute(mod, :pipelines, name)
+  end
+
+  defp get_param(params, key) do
+    case Map.get(params, key) do
+      nil -> Map.get(params, to_string(key))
+      val -> val
+    end
   end
 end
