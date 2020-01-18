@@ -129,7 +129,7 @@ defmodule Commandex do
       quote unquote: false do
         params = for pair <- Module.get_attribute(__MODULE__, :params), into: %{}, do: pair
         data = for pair <- Module.get_attribute(__MODULE__, :data), into: %{}, do: pair
-        pipelines = Module.get_attribute(__MODULE__, :pipelines)
+        pipelines = __MODULE__ |> Module.get_attribute(:pipelines) |> Enum.reverse()
 
         Module.put_attribute(__MODULE__, :struct_fields, {:params, params})
         Module.put_attribute(__MODULE__, :struct_fields, {:data, data})
@@ -147,7 +147,7 @@ defmodule Commandex do
           pipelines
           |> Enum.reduce_while(command, fn fun, acc ->
             case acc do
-              %{halted: false} -> {:cont, Commandex.apply_fun(command, fun)}
+              %{halted: false} -> {:cont, Commandex.apply_fun(acc, fun)}
               _ -> {:halt, acc}
             end
           end)
