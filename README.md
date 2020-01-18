@@ -93,7 +93,7 @@ If a command passes through all pipelines without calling `halt/1`, `:success`
 will be set to `true`. Otherwise, subsequent pipelines after the `halt/1` will 
 be ignored and `:success` will be set to `false`.
 
-## Example 
+Running a command is easy:
 
 ```elixir
 %{email: "example@example.com", password: "asdf1234"}
