@@ -1,3 +1,7 @@
+[![Build Status](https://travis-ci.org/codedge-llc/commandex.svg?branch=master)](https://travis-ci.org/codedge-llc/commandex)
+[![Hex.pm](http://img.shields.io/hexpm/v/commandex.svg)](https://hex.pm/packages/commandex)
+[![Hex.pm](http://img.shields.io/hexpm/dt/commandex.svg)](https://hex.pm/packages/commandex)
+
 # Commandex
 
 > Make Elixir actions a first-class data type.
