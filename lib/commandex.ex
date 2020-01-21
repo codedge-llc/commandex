@@ -113,7 +113,7 @@ defmodule Commandex do
           Module.register_attribute(__MODULE__, name, accumulate: true)
         end
 
-        for field <- [{:success, false}, {:error, %{}}, {:halted, false}] do
+        for field <- [{:success, false}, {:errors, %{}}, {:halted, false}] do
           Module.put_attribute(__MODULE__, :struct_fields, field)
         end
 
