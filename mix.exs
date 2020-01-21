@@ -1,7 +1,7 @@
 defmodule Commandex.MixProject do
   use Mix.Project
 
-  @version "0.1.0"
+  @version "0.2.0"
 
   def project do
     [
@@ -37,7 +37,7 @@ defmodule Commandex.MixProject do
   defp package do
     [
       files: ~w(lib mix.exs .formatter.exs README* LICENSE*),
-      maintainers: ["Henry Popp"],
+      maintainers: ["Henry Popp", "Tyler Hurst"],
       licenses: ["MIT"],
       links: %{"GitHub" => "https://github.com/codedge-llc/commandex"}
     ]

@@ -55,7 +55,7 @@ defmodule Commandex do
       %RegisterUser{
         success: false,
         halted: false,
-        error: %{},
+        errors: %{},
         params: %{email: nil, password: nil},
         data: %{password_hash: nil, user: nil},
         pipelines: [:hash_password, :create_user, :send_welcome_email]
@@ -84,10 +84,10 @@ defmodule Commandex do
         %{success: true, data: %{user: user}} ->
           # Success! We've got a user now
 
-        %{success: false, error: %{password: :not_given}} ->
+        %{success: false, errors: %{password: :not_given}} ->
           # Respond with a 400 or something
 
-        %{success: false, error: _error} ->
+        %{success: false, errors: _error} ->
           # I'm a lazy programmer that writes catch-all error handling
       end
   """
@@ -95,7 +95,7 @@ defmodule Commandex do
   @type command :: %{
           __struct__: atom,
           data: map,
-          error: map,
+          errors: map,
           halted: boolean,
           params: map,
           pipelines: [atom | {module, atom} | function],
@@ -257,9 +257,9 @@ defmodule Commandex do
   end
 
   @doc """
-  Sets an error for given key and value.
+  Sets error for given key and value.
 
-  `:error` is a map. Putting an error on the same key will overwrite the previous value.
+  `:errors` is a map. Putting an error on the same key will overwrite the previous value.
 
       def hash_password(command, %{password: nil} = _params, _data) do
         command
@@ -268,8 +268,8 @@ defmodule Commandex do
       end
   """
   @spec put_error(command, any, any) :: command
-  def put_error(%{error: error} = command, key, val) do
-    %{command | error: Map.put(error, key, val)}
+  def put_error(%{errors: error} = command, key, val) do
+    %{command | errors: Map.put(error, key, val)}
   end
 
   @doc """
