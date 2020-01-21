@@ -115,7 +115,9 @@ Running a command is easy:
 end
 ```
 
-For even leaner implementations, you can run a command by passing the params directly into `&run/1` without using `&new/1`:
+For even leaner implementations, you can run a command by passing 
+the params directly into `&run/1` without using `&new/1`:
+
 ```elixir
 %{email: "example@example.com", password: "asdf1234"}
 |> RegisterUser.run()
