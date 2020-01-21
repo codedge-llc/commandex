@@ -74,7 +74,7 @@ The `command/1` macro will define a struct that looks like:
 %RegisterUser{
   success: false,
   halted: false,
-  error: %{},
+  errors: %{},
   params: %{email: nil, password: nil},
   data: %{password_hash: nil, user: nil},
   pipelines: [:hash_password, :create_user, :send_welcome_email]
@@ -107,10 +107,10 @@ Running a command is easy:
   %{success: true, data: %{user: user}} ->
     # Success! We've got a user now
 
-  %{success: false, error: %{password: :not_given}} ->
+  %{success: false, errors: %{password: :not_given}} ->
     # Respond with a 400 or something
 
-  %{success: false, error: _error} ->
+  %{success: false, errors: _errors} ->
     # I'm a lazy programmer that writes catch-all error handling
 end
 ```
@@ -123,7 +123,7 @@ For even leaner implementations, you can run a command by passing the params dir
   %{success: true, data: %{user: user}} ->
     # Success! We've got a user now
 
-  %{success: false, error: _error} ->
+  %{success: false, errors: _errors} ->
     # I'm a lazy programmer that writes catch-all error handling
 end
 ```
