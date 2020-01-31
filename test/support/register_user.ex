@@ -6,7 +6,7 @@ defmodule Commandex.RegisterUser do
   import Commandex
 
   command do
-    param :email
+    param :email, default: "test@test.com"
     param :password
 
     data :user
@@ -14,6 +14,7 @@ defmodule Commandex.RegisterUser do
 
     pipeline :create_user
     pipeline :record_auth_attempt
+    pipeline &IO.inspect/1
   end
 
   def create_user(command, %{password: nil} = _params, _data) do
