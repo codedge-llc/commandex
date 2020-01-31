@@ -5,11 +5,19 @@ defmodule CommandexTest do
 
   describe "struct assembly" do
     test "sets :params map" do
-      assert %RegisterUser{}.params == %{email: nil, password: nil}
+      for key <- [:email, :password] do
+        assert Map.has_key?(%RegisterUser{}.params, key)
+      end
+    end
+
+    test "sets param default if specified" do
+      assert %RegisterUser{}.params.email == "test@test.com"
     end
 
     test "sets :data map" do
-      assert %RegisterUser{}.data == %{user: nil, auth: nil}
+      for key <- [:user, :auth] do
+        assert Map.has_key?(%RegisterUser{}.data, key)
+      end
     end
   end
 end

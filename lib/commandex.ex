@@ -139,7 +139,7 @@ defmodule Commandex do
         @doc """
         Creates a new #{__MODULE__} struct from given params.
         """
-        def new(opts) do
+        def new(opts \\ []) do
           Commandex.parse_params(%__MODULE__{}, opts)
         end
 
@@ -180,10 +180,10 @@ defmodule Commandex do
         # ...pipelines
       end
   """
-  @spec param(atom) :: no_return
-  defmacro param(name) do
+  @spec param(atom, Keyword.t()) :: no_return
+  defmacro param(name, opts \\ []) do
     quote do
-      Commandex.__param__(__MODULE__, unquote(name))
+      Commandex.__param__(__MODULE__, unquote(name), unquote(opts))
     end
   end
 
@@ -293,12 +293,12 @@ defmodule Commandex do
 
   @doc false
   def parse_params(%{params: p} = struct, params) when is_list(params) do
-    params = for {key, _} <- p, into: %{}, do: {key, Keyword.get(params, key)}
+    params = for {key, _} <- p, into: %{}, do: {key, Keyword.get(params, key, p[key])}
     %{struct | params: params}
   end
 
   def parse_params(%{params: p} = struct, %{} = params) do
-    params = for {key, _} <- p, into: %{}, do: {key, get_param(params, key)}
+    params = for {key, _} <- p, into: %{}, do: {key, get_param(params, key) || p[key]}
     %{struct | params: params}
   end
 
@@ -307,7 +307,11 @@ defmodule Commandex do
     :erlang.apply(mod, name, [command, params, data])
   end
 
-  def apply_fun(%{params: params, data: data} = command, fun) when is_function(fun) do
+  def apply_fun(command, fun) when is_function(fun, 1) do
+    fun.(command)
+  end
+
+  def apply_fun(%{params: params, data: data} = command, fun) when is_function(fun, 3) do
     fun.(command, params, data)
   end
 
@@ -319,14 +323,15 @@ defmodule Commandex do
     :erlang.apply(m, f, [command, params, data] ++ a)
   end
 
-  def __param__(mod, name) do
+  def __param__(mod, name, opts) do
     params = Module.get_attribute(mod, :params)
 
     if List.keyfind(params, name, 0) do
       raise ArgumentError, "param #{inspect(name)} is already set on command"
     end
 
-    Module.put_attribute(mod, :params, {name, nil})
+    default = Keyword.get(opts, :default)
+    Module.put_attribute(mod, :params, {name, default})
   end
 
   def __data__(mod, name) do
