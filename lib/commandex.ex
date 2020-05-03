@@ -92,13 +92,45 @@ defmodule Commandex do
       end
   """
 
+  @typedoc """
+  Command pipeline stage.
+
+  A pipeline function can be defined multiple ways:
+
+  - `pipeline :do_work` - Name of a function inside the command's module, arity three.
+  - `pipeline {YourModule, :do_work}` - Arity three.
+  - `pipeline {YourModule, :do_work, [:additonal, "args"]}` - Arity three plus the 
+    number of additional args given.
+  - `pipeline &YourModule.do_work/1` - Or any anonymous function of arity one.
+  - `pipeline &YourModule.do_work/3` - Or any anonymous function of arity three.
+  """
+  @type pipeline ::
+          atom
+          | {module, atom}
+          | {module, atom, [any]}
+          | (command :: struct -> command :: struct)
+          | (command :: struct, params :: map, data :: map -> command :: struct)
+
+  @typedoc """
+  Command struct.
+
+  ## Attributes
+
+  - `data` - Data generated during the pipeline, defined by `Commandex.data/1`.
+  - `errors` - Errors generated during the pipeline with `Commandex.put_error/3`
+  - `halted` - Whether or not the pipeline was halted.
+  - `params` - Parameters given to the command, defined by `Commandex.param/1`.
+  - `pipelines` - A list of pipeline functions to execute, defined by `Commandex.pipeline/1`.
+  - `success` - Whether or not the command was successful. This is only set to
+    `true` if the command was not halted after running all of the pipelines.
+  """
   @type command :: %{
           __struct__: atom,
           data: map,
           errors: map,
           halted: boolean,
           params: map,
-          pipelines: [atom | {module, atom} | function],
+          pipelines: [pipeline()],
           success: boolean
         }
 
@@ -136,13 +168,43 @@ defmodule Commandex do
         Module.put_attribute(__MODULE__, :struct_fields, {:pipelines, pipelines})
         defstruct @struct_fields
 
-        @doc """
-        Creates a new #{__MODULE__} struct from given params.
+        @typedoc """
+        Command struct.
+
+        ## Attributes
+
+        - `data` - Data generated during the pipeline, defined by `Commandex.data/1`.
+        - `errors` - Errors generated during the pipeline with `Commandex.put_error/3`
+        - `halted` - Whether or not the pipeline was halted.
+        - `params` - Parameters given to the command, defined by `Commandex.param/1`.
+        - `pipelines` - A list of pipeline functions to execute, defined by `Commandex.pipeline/1`.
+        - `success` - Whether or not the command was successful. This is only set to
+          `true` if the command was not halted after running all of the pipelines.
         """
+        @type t :: %__MODULE__{
+                data: map,
+                errors: map,
+                halted: boolean,
+                params: map,
+                pipelines: [Commandex.pipeline()],
+                success: boolean
+              }
+
+        @doc """
+        Creates a new struct from given parameters.
+        """
+        @spec new(map | Keyword.t()) :: t
         def new(opts \\ []) do
           Commandex.parse_params(%__MODULE__{}, opts)
         end
 
+        @doc """
+        Runs given pipelines in order and returns command struct.
+
+        `run/1` can either take parameters that would be passed to `new/1`
+        or the command struct itself.
+        """
+        @spec run(map | Keyword.t() | t) :: t
         def run(%unquote(__MODULE__){pipelines: pipelines} = command) do
           pipelines
           |> Enum.reduce_while(command, fn fun, acc ->
@@ -224,11 +286,14 @@ defmodule Commandex do
       |> check_valid_email()
       |> create_user()
 
-  A pipeline function must be of arity three (command, params, data), but can be defined multiple ways:
+  A pipeline function can be defined multiple ways:
 
-      pipline :create_user # The name of a function inside the command's module
-      pipeline &YourModule.create_user/3
-      pipeline {YourModule, :create_user} 
+  - `pipeline :do_work` - Name of a function inside the command's module, arity three.
+  - `pipeline {YourModule, :do_work}` - Arity three.
+  - `pipeline {YourModule, :do_work, [:additonal, "args"]}` - Arity three plus the 
+    number of additional args given.
+  - `pipeline &YourModule.do_work/1` - Or any anonymous function of arity one.
+  - `pipeline &YourModule.do_work/3` - Or any anonymous function of arity three.
   """
   @spec pipeline(atom) :: no_return
   defmacro pipeline(name) do
