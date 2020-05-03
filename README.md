@@ -16,7 +16,7 @@ Add commandex as a `mix.exs` dependency:
 ```elixir
 def deps do
   [
-    {:commandex, "~> 0.3.0"}
+    {:commandex, "~> 0.4.0"}
   ]
 end
 ```
@@ -92,9 +92,9 @@ As well as two functions:
 or map with atom/string keys.
 
 `&run/1` takes a command struct and runs it through the pipeline functions defined
-in the command. Functions are executed *in the order in which they are defined*.
-If a command passes through all pipelines without calling `halt/1`, `:success` 
-will be set to `true`. Otherwise, subsequent pipelines after the `halt/1` will 
+in the command. Functions are executed _in the order in which they are defined_.
+If a command passes through all pipelines without calling `halt/1`, `:success`
+will be set to `true`. Otherwise, subsequent pipelines after the `halt/1` will
 be ignored and `:success` will be set to `false`.
 
 Running a command is easy:
@@ -115,17 +115,10 @@ Running a command is easy:
 end
 ```
 
-For even leaner implementations, you can run a command by passing 
+For even leaner implementations, you can run a command by passing
 the params directly into `&run/1` without using `&new/1`:
 
 ```elixir
 %{email: "example@example.com", password: "asdf1234"}
 |> RegisterUser.run()
-|> case do
-  %{success: true, data: %{user: user}} ->
-    # Success! We've got a user now
-
-  %{success: false, errors: _errors} ->
-    # I'm a lazy programmer that writes catch-all error handling
-end
 ```
