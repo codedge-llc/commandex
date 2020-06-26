@@ -363,7 +363,7 @@ defmodule Commandex do
   end
 
   def parse_params(%{params: p} = struct, %{} = params) do
-    params = for {key, _} <- p, into: %{}, do: {key, get_param(params, key) || p[key]}
+    params = for {key, _} <- p, into: %{}, do: {key, get_param(params, key, p[key])}
     %{struct | params: params}
   end
 
@@ -413,10 +413,13 @@ defmodule Commandex do
     Module.put_attribute(mod, :pipelines, name)
   end
 
-  defp get_param(params, key) do
+  defp get_param(params, key, default) do
     case Map.get(params, key) do
-      nil -> Map.get(params, to_string(key))
-      val -> val
+      nil ->
+        Map.get(params, to_string(key), default)
+
+      val ->
+        val
     end
   end
 end

@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.4.1
+
+- Set `false` parameter correctly when given a Map of params. Was previously
+  evaluating to `nil`.
+
 ## v0.4.0
 
 - Default typespecs and documentation for modules using Commandex.

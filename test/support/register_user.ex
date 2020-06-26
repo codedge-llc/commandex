@@ -8,13 +8,25 @@ defmodule Commandex.RegisterUser do
   command do
     param :email, default: "test@test.com"
     param :password
+    param :agree_tos
 
     data :user
     data :auth
 
+    pipeline :verify_tos
     pipeline :create_user
     pipeline :record_auth_attempt
     pipeline &IO.inspect/1
+  end
+
+  def verify_tos(command, %{agree_tos: true} = _params, _data) do
+    command
+  end
+
+  def verify_tos(command, %{agree_tos: false} = _params, _data) do
+    command
+    |> put_error(:tos, :not_accepted)
+    |> halt()
   end
 
   def create_user(command, %{password: nil} = _params, _data) do
