@@ -122,3 +122,18 @@ the params directly into `&run/1` without using `&new/1`:
 %{email: "example@example.com", password: "asdf1234"}
 |> RegisterUser.run()
 ```
+
+## Contributing
+
+### Testing
+
+Unit tests can be run with `mix test`.
+
+### Formatting
+
+This project uses Elixir's `mix format` for formatting. Add a hook in your editor of choice to
+run it after a save. Be sure it respects this project's `.formatter.exs`.
+
+### Commits
+
+Git commit subjects use the [Karma style](http://karma-runner.github.io/5.0/dev/git-commit-msg.html).
