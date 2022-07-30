@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/codedge-llc/commandex.svg?branch=master)](https://travis-ci.org/codedge-llc/commandex)
+[![CI](https://github.com/codedge-llc/commandex/actions/workflows/ci.yml/badge.svg)](https://github.com/codedge-llc/commandex/actions/workflows/ci.yml)
 [![Hex.pm](http://img.shields.io/hexpm/v/commandex.svg)](https://hex.pm/packages/commandex)
 [![Hex.pm](http://img.shields.io/hexpm/dt/commandex.svg)](https://hex.pm/packages/commandex)
 
@@ -137,3 +137,9 @@ run it after a save. Be sure it respects this project's `.formatter.exs`.
 ### Commits
 
 Git commit subjects use the [Karma style](http://karma-runner.github.io/5.0/dev/git-commit-msg.html).
+
+## License
+
+Copyright (c) 2020-2022 Codedge LLC (https://www.codedge.io/)
+
+This library is MIT licensed. See the [LICENSE](https://github.com/codedge-llc/commandex/blob/master/LICENSE) for details.
