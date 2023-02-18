@@ -131,8 +131,9 @@ Unit tests can be run with `mix test`.
 
 ### Formatting
 
-This project uses Elixir's `mix format` for formatting. Add a hook in your editor of choice to
-run it after a save. Be sure it respects this project's `.formatter.exs`.
+This project uses Elixir's `mix format` and [Prettier](https://prettier.io) for formatting.
+Add hooks in your editor of choice to run it after a save. Be sure it respects this project's
+`.formatter.exs`.
 
 ### Commits
 
@@ -140,6 +141,6 @@ Git commit subjects use the [Karma style](http://karma-runner.github.io/5.0/dev/
 
 ## License
 
-Copyright (c) 2020-2022 Codedge LLC (https://www.codedge.io/)
+Copyright (c) 2020-2023 Codedge LLC (https://www.codedge.io/)
 
 This library is MIT licensed. See the [LICENSE](https://github.com/codedge-llc/commandex/blob/master/LICENSE) for details.
