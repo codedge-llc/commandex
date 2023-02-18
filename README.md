@@ -131,8 +131,9 @@ Unit tests can be run with `mix test`.
 
 ### Formatting
 
-This project uses Elixir's `mix format` for formatting. Add a hook in your editor of choice to
-run it after a save. Be sure it respects this project's `.formatter.exs`.
+This project uses Elixir's `mix format` and [Prettier](https://prettier.io) for formatting.
+Add hooks in your editor of choice to run it after a save. Be sure it respects this project's
+`.formatter.exs`.
 
 ### Commits
 
