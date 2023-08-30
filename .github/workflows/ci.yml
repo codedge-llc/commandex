@@ -13,8 +13,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
-        with:
-          ref: ${{ github.head_ref }}
       - name: Use Node.js 18.x
         uses: actions/setup-node@v3
         with:
@@ -31,8 +29,8 @@ jobs:
       - name: Set up Elixir
         uses: erlef/setup-beam@v1
         with:
-          elixir-version: "1.14.3"
-          otp-version: "24.3"
+          elixir-version: "1.15.5"
+          otp-version: "26.0.2"
       - name: Restore dependencies cache
         uses: actions/cache@v3
         with:
@@ -51,8 +49,8 @@ jobs:
       - name: Set up Elixir
         uses: erlef/setup-beam@v1
         with:
-          elixir-version: "1.14.3"
-          otp-version: "24.3"
+          elixir-version: "1.15.5"
+          otp-version: "26.0.2"
       - name: Restore dependencies cache
         uses: actions/cache@v3
         with:
