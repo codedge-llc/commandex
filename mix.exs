@@ -21,7 +21,7 @@ defmodule Commandex.MixProject do
   defp deps do
     [
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
-      {:ex_doc, "~> 0.30", only: :dev}
+      {:ex_doc, "~> 0.31", only: :dev}
     ]
   end
 
