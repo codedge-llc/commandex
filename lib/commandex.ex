@@ -196,6 +196,17 @@ defmodule Commandex do
           Commandex.parse_params(%__MODULE__{}, opts)
         end
 
+        if Enum.empty?(params) do
+          @doc """
+          Runs given pipelines in order and returns command struct.
+          """
+          @spec run :: t
+          def run do
+            new()
+            |> run()
+          end
+        end
+
         @doc """
         Runs given pipelines in order and returns command struct.
 
