@@ -58,6 +58,21 @@ defmodule CommandexTest do
     end
   end
 
+  describe "run/0" do
+    test "is defined if no params are defined" do
+      assert Kernel.function_exported?(Commandex.GenerateReport, :run, 0)
+
+      command = Commandex.GenerateReport.run()
+      assert command.success
+      assert command.data.total_valid > 0
+      assert command.data.total_invalid > 0
+    end
+
+    test "is not defined if params are defined" do
+      refute Kernel.function_exported?(Commandex.RegisterUser, :run, 0)
+    end
+  end
+
   defp assert_params(command) do
     assert command.params.email == @email
     assert command.params.password == @password

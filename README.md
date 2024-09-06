@@ -5,8 +5,8 @@
 [![CI](https://github.com/codedge-llc/commandex/actions/workflows/ci.yml/badge.svg)](https://github.com/codedge-llc/commandex/actions/workflows/ci.yml)
 [![Version](https://img.shields.io/hexpm/v/commandex.svg)](https://hex.pm/packages/commandex)
 [![Total Downloads](https://img.shields.io/hexpm/dt/commandex.svg)](https://hex.pm/packages/commandex)
-[![License](https://img.shields.io/hexpm/l/commandex.svg)](https://github.com/codedge-llc/commandex/blob/master/LICENSE)
-[![Last Updated](https://img.shields.io/github/last-commit/codedge-llc/commandex.svg)](https://github.com/codedge-llc/commandex/commits/master)
+[![License](https://img.shields.io/hexpm/l/commandex.svg)](https://github.com/codedge-llc/commandex/blob/main/LICENSE)
+[![Last Updated](https://img.shields.io/github/last-commit/codedge-llc/commandex.svg)](https://github.com/codedge-llc/commandex/commits/main)
 [![Documentation](https://img.shields.io/badge/documentation-gray)](https://hexdocs.pm/commandex/)
 
 Commandex structs are a loose implementation of the command pattern, making it easy
@@ -146,4 +146,4 @@ Git commit subjects use the [Karma style](http://karma-runner.github.io/5.0/dev/
 
 Copyright (c) 2020-2024 Codedge LLC (https://www.codedge.io/)
 
-This library is MIT licensed. See the [LICENSE](https://github.com/codedge-llc/commandex/blob/master/LICENSE) for details.
+This library is MIT licensed. See the [LICENSE](https://github.com/codedge-llc/commandex/blob/main/LICENSE) for details.
