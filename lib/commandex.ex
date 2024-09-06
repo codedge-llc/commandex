@@ -75,8 +75,6 @@ defmodule Commandex do
   will be set to `true`. Otherwise, subsequent pipelines after the `halt/1` will 
   be ignored and `:success` will be set to `false`.
 
-  ## Example 
-
       %{email: "example@example.com", password: "asdf1234"}
       |> RegisterUser.new()
       |> RegisterUser.run()
