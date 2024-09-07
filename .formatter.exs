@@ -1,6 +1,7 @@
 locals_without_parens = [
   param: 1,
   param: 2,
+  param: 3,
   data: 1,
   pipeline: 1
 ]

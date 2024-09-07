@@ -139,7 +139,7 @@ defmodule Commandex do
   defmacro command(do: block) do
     prelude =
       quote do
-        for name <- [:struct_fields, :params, :data, :pipelines] do
+        for name <- [:struct_fields, :params, :data, :pipelines, :__schema__] do
           Module.register_attribute(__MODULE__, name, accumulate: true)
         end
 
@@ -160,7 +160,9 @@ defmodule Commandex do
         params = for pair <- Module.get_attribute(__MODULE__, :params), into: %{}, do: pair
         data = for pair <- Module.get_attribute(__MODULE__, :data), into: %{}, do: pair
         pipelines = __MODULE__ |> Module.get_attribute(:pipelines) |> Enum.reverse()
+        schema = for pair <- Module.get_attribute(__MODULE__, :__schema__), into: %{}, do: pair
 
+        Module.put_attribute(__MODULE__, :struct_fields, {:__schema__, schema})
         Module.put_attribute(__MODULE__, :struct_fields, {:params, params})
         Module.put_attribute(__MODULE__, :struct_fields, {:data, data})
         Module.put_attribute(__MODULE__, :struct_fields, {:pipelines, pipelines})
@@ -252,9 +254,9 @@ defmodule Commandex do
       end
   """
   @spec param(atom, Keyword.t()) :: no_return
-  defmacro param(name, opts \\ []) do
+  defmacro param(name, type, opts \\ []) do
     quote do
-      Commandex.__param__(__MODULE__, unquote(name), unquote(opts))
+      Commandex.__param__(__MODULE__, unquote(name), unquote(type), unquote(opts))
     end
   end
 
@@ -368,6 +370,17 @@ defmodule Commandex do
   @doc false
   def parse_params(%{params: p} = struct, params) when is_list(params) do
     params = for {key, _} <- p, into: %{}, do: {key, Keyword.get(params, key, p[key])}
+
+    params =
+      Enum.map(params, fn {key, val} ->
+        {type, opts} = struct.__schema__[key]
+
+        case Commandex.Parameter.cast(val, type, opts) do
+          {:ok, cast_value} -> {key, cast_value}
+          _else -> {key, val}
+        end
+      end)
+
     %{struct | params: params}
   end
 
@@ -397,7 +410,7 @@ defmodule Commandex do
     :erlang.apply(m, f, [command, params, data] ++ a)
   end
 
-  def __param__(mod, name, opts) do
+  def __param__(mod, name, type, opts) do
     params = Module.get_attribute(mod, :params)
 
     if List.keyfind(params, name, 0) do
@@ -406,6 +419,7 @@ defmodule Commandex do
 
     default = Keyword.get(opts, :default)
     Module.put_attribute(mod, :params, {name, default})
+    Module.put_attribute(mod, :__schema__, {name, {type, opts}})
   end
 
   def __data__(mod, name) do
