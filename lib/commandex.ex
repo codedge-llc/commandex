@@ -2,7 +2,7 @@ defmodule Commandex do
   @moduledoc """
   Defines a command struct.
 
-  Commandex structs are a loose implementation of the command pattern, making it easy
+  Commandex is a loose implementation of the command pattern, making it easy
   to wrap parameters, data, and errors into a well-defined struct.
 
   ## Example
@@ -70,7 +70,7 @@ defmodule Commandex do
   or map with atom/string keys.
 
   `&run/1` takes a command struct and runs it through the pipeline functions defined
-  in the command. Functions are executed *in the order in which they are defined*.
+  in the command. **Functions are executed in the order in which they are defined**.
   If a command passes through all pipelines without calling `halt/1`, `:success` 
   will be set to `true`. Otherwise, subsequent pipelines after the `halt/1` will 
   be ignored and `:success` will be set to `false`.
@@ -88,6 +88,21 @@ defmodule Commandex do
         %{success: false, errors: _error} ->
           # I'm a lazy programmer that writes catch-all error handling
       end
+
+  ## Parameter-less Commands
+
+  If a command does not have any parameters defined, a `run/0` will be generated
+  automatically. Useful for diagnostic jobs and internal tasks.
+
+      iex> GenerateReport.run()
+      %GenerateReport{
+        pipelines: [:calculate_valid, :calculate_invalid],
+        data: %{total_valid: 183220, total_invalid: 781215},
+        params: %{},
+        halted: false,
+        errors: %{},
+        success: true
+      }
   """
 
   @typedoc """
