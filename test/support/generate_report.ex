@@ -1,4 +1,4 @@
-defmodule Commandex.GenerateReport do
+defmodule GenerateReport do
   @moduledoc """
   Example command that generates fake data.
 
@@ -11,17 +11,18 @@ defmodule Commandex.GenerateReport do
     data :total_valid
     data :total_invalid
 
-    pipeline :calculate_valid
-    pipeline :calculate_invalid
+    pipeline :fetch_data
+    pipeline :calculate_results
   end
 
-  def calculate_valid(command, _params, _data) do
+  def fetch_data(command, _params, _data) do
+    # Not real.
     command
-    |> put_data(:total_valid, :rand.uniform(1_000_000))
   end
 
-  def calculate_invalid(command, _params, _data) do
+  def calculate_results(command, _params, _data) do
     command
-    |> put_data(:total_invalid, :rand.uniform(1_000_000))
+    |> put_data(:total_valid, 183_220)
+    |> put_data(:total_invalid, 781_215)
   end
 end

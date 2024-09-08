@@ -96,7 +96,7 @@ defmodule Commandex do
 
       iex> GenerateReport.run()
       %GenerateReport{
-        pipelines: [:calculate_valid, :calculate_invalid],
+        pipelines: [:fetch_data, :calculate_results],
         data: %{total_valid: 183220, total_invalid: 781215},
         params: %{},
         halted: false,

@@ -16,6 +16,7 @@ defmodule Commandex.MixProject do
       package: package(),
       source_url: "https://github.com/codedge-llc/commandex",
       start_permanent: Mix.env() == :prod,
+      test_coverage: test_coverage(),
       version: @version
     ]
   end
@@ -62,6 +63,16 @@ defmodule Commandex.MixProject do
         "Sponsor" => "https://github.com/sponsors/codedge-llc"
       },
       maintainers: ["Henry Popp", "Tyler Hurst"]
+    ]
+  end
+
+  defp test_coverage do
+    [
+      ignore_modules: [
+        GenerateReport,
+        RegisterUser
+      ],
+      summary: [threshold: 70]
     ]
   end
 

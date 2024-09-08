@@ -1,4 +1,4 @@
-defmodule Commandex.RegisterUser do
+defmodule RegisterUser do
   @moduledoc """
   Example command that registers a user.
   """
