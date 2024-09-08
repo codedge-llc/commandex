@@ -433,8 +433,28 @@ defmodule Commandex do
     Module.put_attribute(mod, :data, {name, nil})
   end
 
-  def __pipeline__(mod, name) do
+  def __pipeline__(mod, name) when is_atom(name) do
     Module.put_attribute(mod, :pipelines, name)
+  end
+
+  def __pipeline__(mod, fun) when is_function(fun, 1) do
+    Module.put_attribute(mod, :pipelines, fun)
+  end
+
+  def __pipeline__(mod, fun) when is_function(fun, 3) do
+    Module.put_attribute(mod, :pipelines, fun)
+  end
+
+  def __pipeline__(mod, {m, f}) do
+    Module.put_attribute(mod, :pipelines, {m, f})
+  end
+
+  def __pipeline__(mod, {m, f, a}) do
+    Module.put_attribute(mod, :pipelines, {m, f, a})
+  end
+
+  def __pipeline__(_mod, name) do
+    raise ArgumentError, "pipeline #{inspect(name)} is not valid"
   end
 
   defp get_param(params, key, default) do

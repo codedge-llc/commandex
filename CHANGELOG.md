@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `run/0` function for commands that don't define any parameters.
 
+### Changed
+
+- Raise `ArgumentError` if an invalid `pipeline` is defined.
+
 ## [0.4.1] - 2020-06-26
 
 ### Fixed

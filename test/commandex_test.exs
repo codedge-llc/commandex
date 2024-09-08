@@ -121,6 +121,18 @@ defmodule CommandexTest do
         FunctionClauseError -> flunk("Should not raise.")
       end
     end
+
+    test "raises if invalid argument defined" do
+      assert_raise ArgumentError, fn ->
+        defmodule ExamplePipelineInvalid do
+          import Commandex
+
+          command do
+            pipeline 1234
+          end
+        end
+      end
+    end
   end
 
   describe "halt/1" do
