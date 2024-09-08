@@ -69,6 +69,7 @@ defmodule Commandex.MixProject do
   defp test_coverage do
     [
       ignore_modules: [
+        FetchUserPosts,
         GenerateReport,
         RegisterUser
       ],

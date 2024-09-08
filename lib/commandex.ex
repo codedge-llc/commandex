@@ -53,12 +53,14 @@ defmodule Commandex do
   The `command/1` macro will define a struct that looks like:
 
       %RegisterUser{
+        __meta__: %{
+          pipelines: [:hash_password, :create_user, :send_welcome_email]
+        },
         success: false,
         halted: false,
         errors: %{},
         params: %{email: nil, password: nil},
         data: %{password_hash: nil, user: nil},
-        pipelines: [:hash_password, :create_user, :send_welcome_email]
       }
 
   As well as two functions:
@@ -96,12 +98,16 @@ defmodule Commandex do
 
       iex> GenerateReport.run()
       %GenerateReport{
-        pipelines: [:fetch_data, :calculate_results],
+        __meta__: %{
+          params: %{},
+          pipelines: [:fetch_data, :calculate_results],
+        },
         data: %{total_valid: 183220, total_invalid: 781215},
-        params: %{},
-        halted: false,
         errors: %{},
-        success: true
+        halted: false,
+        params: %{},
+        success: true,
+        valid: true
       }
   """
 
@@ -139,11 +145,13 @@ defmodule Commandex do
   """
   @type command :: %{
           __struct__: atom,
+          __meta__: %{
+            pipelines: [pipeline()]
+          },
           data: map,
           errors: map,
           halted: boolean,
           params: map,
-          pipelines: [pipeline()],
           success: boolean
         }
 
@@ -158,10 +166,6 @@ defmodule Commandex do
           Module.register_attribute(__MODULE__, name, accumulate: true)
         end
 
-        for field <- [{:success, false}, {:errors, %{}}, {:halted, false}, {:valid, false}] do
-          Module.put_attribute(__MODULE__, :struct_fields, field)
-        end
-
         try do
           import Commandex
           unquote(block)
@@ -172,14 +176,20 @@ defmodule Commandex do
 
     postlude =
       quote unquote: false do
-        params = for pair <- Module.get_attribute(__MODULE__, :params), into: %{}, do: pair
-        data = for pair <- Module.get_attribute(__MODULE__, :data), into: %{}, do: pair
+        data = __MODULE__ |> Module.get_attribute(:data) |> Enum.into(%{})
+        params = __MODULE__ |> Module.get_attribute(:params) |> Enum.into(%{})
         pipelines = __MODULE__ |> Module.get_attribute(:pipelines) |> Enum.reverse()
+        schema = %{params: params, pipelines: pipelines}
 
-        Module.put_attribute(__MODULE__, :struct_fields, {:__schema__, %{params: params}})
+        # Added in reverse order so the struct fields sort alphabetically.
+        Module.put_attribute(__MODULE__, :struct_fields, {:valid, false})
+        Module.put_attribute(__MODULE__, :struct_fields, {:success, false})
         Module.put_attribute(__MODULE__, :struct_fields, {:params, %{}})
+        Module.put_attribute(__MODULE__, :struct_fields, {:halted, false})
+        Module.put_attribute(__MODULE__, :struct_fields, {:errors, %{}})
         Module.put_attribute(__MODULE__, :struct_fields, {:data, data})
-        Module.put_attribute(__MODULE__, :struct_fields, {:pipelines, pipelines})
+        Module.put_attribute(__MODULE__, :struct_fields, {:__meta__, schema})
+
         defstruct @struct_fields
 
         @typedoc """
@@ -196,20 +206,23 @@ defmodule Commandex do
           `true` if the command was not halted after running all of the pipelines.
         """
         @type t :: %__MODULE__{
+                __meta__: %{
+                  pipelines: [Commandex.pipeline()]
+                },
                 data: map,
                 errors: map,
                 halted: boolean,
                 params: map,
-                pipelines: [Commandex.pipeline()],
-                success: boolean
+                success: boolean | nil,
+                valid: boolean | nil
               }
 
         @doc """
         Creates a new struct from given parameters.
         """
         @spec new(map | Keyword.t()) :: t
-        def new(opts \\ []) do
-          Commandex.parse_params(%__MODULE__{}, opts)
+        def new(params \\ []) do
+          Commandex.Parameter.cast_params(%__MODULE__{}, params)
         end
 
         if Enum.empty?(params) do
@@ -218,8 +231,7 @@ defmodule Commandex do
           """
           @spec run :: t
           def run do
-            new()
-            |> run()
+            new() |> run()
           end
         end
 
@@ -230,7 +242,7 @@ defmodule Commandex do
         or the command struct itself.
         """
         @spec run(map | Keyword.t() | t) :: t
-        def run(%unquote(__MODULE__){pipelines: pipelines} = command) do
+        def run(%unquote(__MODULE__){__meta__: %{pipelines: pipelines}} = command) do
           pipelines
           |> Enum.reduce_while(command, fn fun, acc ->
             case acc do
@@ -383,50 +395,10 @@ defmodule Commandex do
 
   @doc false
   def maybe_mark_successful(%{halted: false} = command), do: %{command | success: true}
-  def maybe_mark_successful(command), do: command
+  def maybe_mark_successful(command), do: %{command | success: false}
 
   @doc false
-  def parse_params(%{__schema__: %{params: p}} = command, params) when is_list(params) do
-    params = for {key, _} <- p, into: %{}, do: {key, Keyword.get(params, key, :"$undefined")}
-
-    command
-    |> do_cast_params(params)
-    |> maybe_mark_invalid()
-  end
-
-  def parse_params(%{__schema__: %{params: p}} = command, params) when is_map(params) do
-    params = for {key, _} <- p, into: %{}, do: {key, get_param(params, key)}
-
-    command
-    |> do_cast_params(params)
-    |> maybe_mark_invalid()
-  end
-
-  defp do_cast_params(command, params) do
-    Enum.reduce(params, command, fn {key, val}, command ->
-      {type, opts} = command.__schema__.params[key]
-
-      case Commandex.Parameter.cast(val, type, opts) do
-        {:ok, :"$undefined"} -> command
-        {:ok, cast_value} -> put_param(command, key, cast_value)
-        {:error, reason} -> put_error(command, key, reason)
-      end
-    end)
-  end
-
-  defp get_param(params, key) do
-    case Map.get(params, key) do
-      nil -> Map.get(params, to_string(key), :"$undefined")
-      val -> val
-    end
-  end
-
-  defp put_param(command, name, value) do
-    params = Map.put(command.params, name, value)
-    %{command | params: params}
-  end
-
-  defp maybe_mark_invalid(command) do
+  def maybe_mark_invalid(command) do
     %{command | valid: Enum.empty?(command.errors)}
   end
 
@@ -451,11 +423,15 @@ defmodule Commandex do
     :erlang.apply(m, f, [command, params, data] ++ a)
   end
 
+  # If no type is defined, opts keyword list becomes third argument.
+  # Run this again with the :any type.
   def __param__(mod, name, opts, []) when is_list(opts) do
     __param__(mod, name, :any, opts)
   end
 
   def __param__(mod, name, type, opts) do
+    Commandex.Parameter.check_type!(name, type)
+
     params = Module.get_attribute(mod, :params)
 
     if Enum.any?(params, fn {p_name, _opts} -> p_name == name end) do

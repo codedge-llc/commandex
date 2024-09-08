@@ -1,41 +1,66 @@
 defmodule Commandex.Parameter do
-  def cast(value, type, opts \\ [])
+  @moduledoc false
 
-  def cast(:"$undefined", type, opts) do
-    case Keyword.get(opts, :default) do
-      nil ->
-        case Keyword.get(opts, :required) do
-          true -> {:error, :required}
-          _ -> {:ok, :"$undefined"}
-        end
+  @base ~w(any boolean float integer string)a
 
-      default ->
-        cast(default, type, opts)
+  def check_type!(name, {_outer, inner}) do
+    check_type!(name, inner)
+  end
+
+  def check_type!(_name, type) when type in @base do
+    type
+  end
+
+  def check_type!(name, type) do
+    raise ArgumentError, "unknown type #{inspect(type)} for param #{inspect(name)}"
+  end
+
+  def cast_params(%{__meta__: %{params: schema_params}} = command, params)
+      when is_map(params) or is_list(params) do
+    schema_params
+    |> extract_params(params)
+    |> Enum.reduce(command, fn {key, val}, command ->
+      {type, _opts} = command.__meta__.params[key]
+
+      case Commandex.Type.cast(val, type) do
+        {:ok, :"$undefined"} ->
+          command
+
+        {:ok, cast_value} ->
+          put_param(command, key, cast_value)
+
+        :error ->
+          command
+          |> put_param(key, val)
+          |> Commandex.put_error(key, :invalid)
+      end
+    end)
+    |> Commandex.maybe_mark_invalid()
+  end
+
+  defp extract_params(schema_params, input_params) do
+    schema_params
+    |> Enum.map(fn {key, {_type, opts}} ->
+      default = Keyword.get(opts, :default, :"$undefined")
+      {key, get_param(input_params, key, default)}
+    end)
+    |> Enum.into(%{})
+  end
+
+  defp get_param(params, key, default) when is_list(params) do
+    Keyword.get(params, key, default)
+  end
+
+  defp get_param(params, key, default) when is_map(params) do
+    with nil <- Map.get(params, key),
+         nil <- Map.get(params, to_string(key)) do
+      default
+    else
+      value -> value
     end
   end
 
-  def cast(value, :any, _opts), do: {:ok, value}
-
-  def cast(value, :boolean, _opts) when is_boolean(value), do: {:ok, value}
-  def cast("true", :boolean, _opts), do: {:ok, true}
-  def cast("false", :boolean, _opts), do: {:ok, false}
-  def cast(_value, :boolean, _opts), do: {:error, :invalid}
-
-  def cast(value, :integer, _opts) when is_integer(value) do
-    {:ok, value}
+  defp put_param(command, name, value) do
+    put_in(command.params[name], value)
   end
-
-  def cast(value, :integer, opts) when is_binary(value) do
-    cast(String.to_integer(value), :integer, opts)
-  end
-
-  def cast(value, :string, _opts) when is_binary(value) do
-    {:ok, value}
-  end
-
-  def cast(value, :string, opts) do
-    cast(inspect(value), :string, opts)
-  end
-
-  def cast(_value, _type, _opts), do: {:error, :invalid}
 end

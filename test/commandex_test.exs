@@ -7,22 +7,14 @@ defmodule CommandexTest do
   @agree_tos false
 
   describe "struct assembly" do
-    test "sets :params map" do
-      for key <- [:email, :password, :agree_tos] do
-        assert Map.has_key?(%RegisterUser{}.params, key)
-      end
-    end
-
-    test "sets param default if specified" do
-      assert %RegisterUser{}.params.email == "test@test.com"
-    end
-
     test "sets :data map" do
       for key <- [:user, :auth] do
         assert Map.has_key?(%RegisterUser{}.data, key)
       end
     end
+  end
 
+  describe "new/1" do
     test "handles atom-key map params correctly" do
       params = %{
         email: @email,
@@ -137,7 +129,7 @@ defmodule CommandexTest do
 
   describe "halt/1" do
     test "ignores remaining pipelines" do
-      command = RegisterUser.run(%{agree_tos: false})
+      command = RegisterUser.run(%{email: @email, password: @password, agree_tos: false})
 
       refute command.success
       assert command.errors === %{tos: :not_accepted}
