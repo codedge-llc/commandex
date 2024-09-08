@@ -2,12 +2,13 @@ defmodule Commandex.MixProject do
   use Mix.Project
 
   @source_url "https://github.com/codedge-llc/commandex"
-  @version "0.4.1"
+  @version "0.5.0"
 
   def project do
     [
       app: :commandex,
       deps: deps(),
+      dialyzer: dialyzer(),
       docs: docs(),
       elixir: "~> 1.9",
       elixirc_paths: elixirc_paths(Mix.env()),
@@ -15,6 +16,7 @@ defmodule Commandex.MixProject do
       package: package(),
       source_url: "https://github.com/codedge-llc/commandex",
       start_permanent: Mix.env() == :prod,
+      test_coverage: test_coverage(),
       version: @version
     ]
   end
@@ -22,12 +24,19 @@ defmodule Commandex.MixProject do
   defp deps do
     [
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
+      {:dialyxir, "~> 1.0", only: [:dev], runtime: false},
       {:ex_doc, "~> 0.31", only: :dev}
     ]
   end
 
   defp elixirc_paths(:test), do: ["lib", "test/support"]
   defp elixirc_paths(_), do: ["lib"]
+
+  defp dialyzer do
+    [
+      plt_file: {:no_warn, "priv/plts/dialyzer.plt"}
+    ]
+  end
 
   defp docs do
     [
@@ -54,6 +63,16 @@ defmodule Commandex.MixProject do
         "Sponsor" => "https://github.com/sponsors/codedge-llc"
       },
       maintainers: ["Henry Popp", "Tyler Hurst"]
+    ]
+  end
+
+  defp test_coverage do
+    [
+      ignore_modules: [
+        GenerateReport,
+        RegisterUser
+      ],
+      summary: [threshold: 70]
     ]
   end
 
