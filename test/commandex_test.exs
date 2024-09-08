@@ -118,7 +118,7 @@ defmodule CommandexTest do
 
         ExamplePipelineValid.run()
       rescue
-        ArgumentError -> flunk("Should not raise.")
+        FunctionClauseError -> flunk("Should not raise.")
       end
     end
   end
