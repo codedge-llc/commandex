@@ -154,11 +154,11 @@ defmodule Commandex do
   defmacro command(do: block) do
     prelude =
       quote do
-        for name <- [:struct_fields, :params, :data, :pipelines, :__schema__] do
+        for name <- [:struct_fields, :params, :data, :pipelines] do
           Module.register_attribute(__MODULE__, name, accumulate: true)
         end
 
-        for field <- [{:success, false}, {:errors, %{}}, {:halted, false}] do
+        for field <- [{:success, false}, {:errors, %{}}, {:halted, false}, {:valid, false}] do
           Module.put_attribute(__MODULE__, :struct_fields, field)
         end
 
@@ -175,10 +175,9 @@ defmodule Commandex do
         params = for pair <- Module.get_attribute(__MODULE__, :params), into: %{}, do: pair
         data = for pair <- Module.get_attribute(__MODULE__, :data), into: %{}, do: pair
         pipelines = __MODULE__ |> Module.get_attribute(:pipelines) |> Enum.reverse()
-        schema = for pair <- Module.get_attribute(__MODULE__, :__schema__), into: %{}, do: pair
 
-        Module.put_attribute(__MODULE__, :struct_fields, {:__schema__, schema})
-        Module.put_attribute(__MODULE__, :struct_fields, {:params, params})
+        Module.put_attribute(__MODULE__, :struct_fields, {:__schema__, %{params: params}})
+        Module.put_attribute(__MODULE__, :struct_fields, {:params, %{}})
         Module.put_attribute(__MODULE__, :struct_fields, {:data, data})
         Module.put_attribute(__MODULE__, :struct_fields, {:pipelines, pipelines})
         defstruct @struct_fields
@@ -269,7 +268,7 @@ defmodule Commandex do
       end
   """
   @spec param(atom, Keyword.t()) :: no_return
-  defmacro param(name, type, opts \\ []) do
+  defmacro param(name, type \\ :any, opts \\ []) do
     quote do
       Commandex.__param__(__MODULE__, unquote(name), unquote(type), unquote(opts))
     end
@@ -350,7 +349,7 @@ defmodule Commandex do
   @doc """
   Sets error for given key and value.
 
-  `:errors` is a map. Putting an error on the same key will overwrite the previous value.
+  `:errors` is a map. Putting an error on the same key will create a list.
 
       def hash_password(command, %{password: nil} = _params, _data) do
         command
@@ -359,8 +358,12 @@ defmodule Commandex do
       end
   """
   @spec put_error(command, any, any) :: command
-  def put_error(%{errors: error} = command, key, val) do
-    %{command | errors: Map.put(error, key, val)}
+  def put_error(%{errors: errors} = command, key, val) do
+    case Map.get(errors, key) do
+      nil -> %{command | errors: Map.put(errors, key, val)}
+      vals when is_list(vals) -> %{command | errors: Map.put(errors, key, [val | vals])}
+      value -> %{command | errors: Map.put(errors, key, [val, value])}
+    end
   end
 
   @doc """
@@ -383,25 +386,48 @@ defmodule Commandex do
   def maybe_mark_successful(command), do: command
 
   @doc false
-  def parse_params(%{params: p} = struct, params) when is_list(params) do
-    params = for {key, _} <- p, into: %{}, do: {key, Keyword.get(params, key, p[key])}
+  def parse_params(%{__schema__: %{params: p}} = command, params) when is_list(params) do
+    params = for {key, _} <- p, into: %{}, do: {key, Keyword.get(params, key, :"$undefined")}
 
-    params =
-      Enum.map(params, fn {key, val} ->
-        {type, opts} = struct.__schema__[key]
-
-        case Commandex.Parameter.cast(val, type, opts) do
-          {:ok, cast_value} -> {key, cast_value}
-          _else -> {key, val}
-        end
-      end)
-
-    %{struct | params: params}
+    command
+    |> do_cast_params(params)
+    |> maybe_mark_invalid()
   end
 
-  def parse_params(%{params: p} = struct, %{} = params) do
-    params = for {key, _} <- p, into: %{}, do: {key, get_param(params, key, p[key])}
-    %{struct | params: params}
+  def parse_params(%{__schema__: %{params: p}} = command, params) when is_map(params) do
+    params = for {key, _} <- p, into: %{}, do: {key, get_param(params, key)}
+
+    command
+    |> do_cast_params(params)
+    |> maybe_mark_invalid()
+  end
+
+  defp do_cast_params(command, params) do
+    Enum.reduce(params, command, fn {key, val}, command ->
+      {type, opts} = command.__schema__.params[key]
+
+      case Commandex.Parameter.cast(val, type, opts) do
+        {:ok, :"$undefined"} -> command
+        {:ok, cast_value} -> put_param(command, key, cast_value)
+        {:error, reason} -> put_error(command, key, reason)
+      end
+    end)
+  end
+
+  defp get_param(params, key) do
+    case Map.get(params, key) do
+      nil -> Map.get(params, to_string(key), :"$undefined")
+      val -> val
+    end
+  end
+
+  defp put_param(command, name, value) do
+    params = Map.put(command.params, name, value)
+    %{command | params: params}
+  end
+
+  defp maybe_mark_invalid(command) do
+    %{command | valid: Enum.empty?(command.errors)}
   end
 
   @doc false
@@ -425,16 +451,18 @@ defmodule Commandex do
     :erlang.apply(m, f, [command, params, data] ++ a)
   end
 
+  def __param__(mod, name, opts, []) when is_list(opts) do
+    __param__(mod, name, :any, opts)
+  end
+
   def __param__(mod, name, type, opts) do
     params = Module.get_attribute(mod, :params)
 
-    if List.keyfind(params, name, 0) do
+    if Enum.any?(params, fn {p_name, _opts} -> p_name == name end) do
       raise ArgumentError, "param #{inspect(name)} is already set on command"
     end
 
-    default = Keyword.get(opts, :default)
-    Module.put_attribute(mod, :params, {name, default})
-    Module.put_attribute(mod, :__schema__, {name, {type, opts}})
+    Module.put_attribute(mod, :params, {name, {type, opts}})
   end
 
   def __data__(mod, name) do
@@ -469,15 +497,5 @@ defmodule Commandex do
 
   def __pipeline__(_mod, name) do
     raise ArgumentError, "pipeline #{inspect(name)} is not valid"
-  end
-
-  defp get_param(params, key, default) do
-    case Map.get(params, key) do
-      nil ->
-        Map.get(params, to_string(key), default)
-
-      val ->
-        val
-    end
   end
 end
