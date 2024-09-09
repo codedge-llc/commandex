@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- `import_deps: [:commandex]` in `.formatter.exs` works again.
+- `import_deps: [:commandex]` in `.formatter.exs` works again. ([#15](https://github.com/codedge-llc/commandex/pull/15))
 
 ## [0.5.0] - 2024-09-08
 
