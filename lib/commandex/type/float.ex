@@ -1,6 +1,24 @@
 defmodule Commandex.Type.Float do
   @behaviour Commandex.Type
 
+  @doc ~S"""
+  ## Examples
+
+      iex> cast(1.234)
+      {:ok, 1.234}
+
+      iex> cast("1.5")
+      {:ok, 1.5}
+
+      iex> cast("1.5.1")
+      :error
+
+      iex> cast(10)
+      {:ok, 10.0}
+
+      iex> cast(false)
+      :error
+  """
   @impl true
   def cast(value) when is_binary(value) do
     case Float.parse(value) do
