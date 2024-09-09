@@ -7,22 +7,14 @@ defmodule CommandexTest do
   @agree_tos false
 
   describe "struct assembly" do
-    test "sets :params map" do
-      for key <- [:email, :password, :agree_tos] do
-        assert Map.has_key?(%RegisterUser{}.params, key)
-      end
-    end
-
-    test "sets param default if specified" do
-      assert %RegisterUser{}.params.email == "test@test.com"
-    end
-
     test "sets :data map" do
       for key <- [:user, :auth] do
         assert Map.has_key?(%RegisterUser{}.data, key)
       end
     end
+  end
 
+  describe "new/1" do
     test "handles atom-key map params correctly" do
       params = %{
         email: @email,
@@ -36,9 +28,9 @@ defmodule CommandexTest do
 
     test "handles string-key map params correctly" do
       params = %{
-        email: @email,
-        password: @password,
-        agree_tos: @agree_tos
+        "email" => @email,
+        "password" => @password,
+        "agree_tos" => @agree_tos
       }
 
       command = RegisterUser.new(params)
@@ -60,7 +52,7 @@ defmodule CommandexTest do
   describe "param/2 macro" do
     test "raises if duplicate defined" do
       assert_raise ArgumentError, fn ->
-        defmodule ExampleParamInvalid do
+        defmodule ExampleParamInvalidDuplicate do
           import Commandex
 
           command do
@@ -70,6 +62,33 @@ defmodule CommandexTest do
           end
         end
       end
+    end
+
+    test "raises if invalid type" do
+      assert_raise ArgumentError, fn ->
+        defmodule ExampleParamInvalidType do
+          import Commandex
+
+          command do
+            param :key_1, :string
+            param :key_2, :what
+          end
+        end
+      end
+    end
+
+    test "defaults to :any type if not given" do
+      defmodule ExampleParamValidAny do
+        import Commandex
+
+        command do
+          param :key_1, :string
+          param :key_2, default: true
+        end
+      end
+
+      command = ExampleParamValidAny.new()
+      assert command.__meta__[:key_2] == {:any, [default: true]}
     end
   end
 
@@ -137,10 +156,43 @@ defmodule CommandexTest do
 
   describe "halt/1" do
     test "ignores remaining pipelines" do
-      command = RegisterUser.run(%{agree_tos: false})
+      command = RegisterUser.run(%{email: @email, password: @password, agree_tos: false})
 
       refute command.success
       assert command.errors === %{tos: :not_accepted}
+    end
+  end
+
+  describe "put_error/3" do
+    test "puts error value for given key" do
+      command =
+        %{email: @email, password: @password, agree_tos: true}
+        |> RegisterUser.new()
+        |> Commandex.put_error(:example, true)
+
+      assert command.errors === %{example: true}
+    end
+
+    test "stacks error values for given key" do
+      command =
+        %{email: @email, password: @password, agree_tos: true}
+        |> RegisterUser.new()
+        |> Commandex.put_error(:example, "foo")
+        |> Commandex.put_error(:example, "bar")
+        |> Commandex.put_error(:example, "baz")
+
+      assert command.errors === %{example: ["baz", "bar", "foo"]}
+    end
+  end
+
+  describe "put_data/3" do
+    test "puts data value for given key" do
+      command =
+        %{email: @email, password: @password, agree_tos: true}
+        |> RegisterUser.new()
+        |> Commandex.put_data(:auth, true)
+
+      assert command.data === %{auth: true}
     end
   end
 
