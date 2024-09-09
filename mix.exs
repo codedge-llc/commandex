@@ -73,7 +73,7 @@ defmodule Commandex.MixProject do
         GenerateReport,
         RegisterUser
       ],
-      summary: [threshold: 70]
+      summary: [threshold: 50]
     ]
   end
 

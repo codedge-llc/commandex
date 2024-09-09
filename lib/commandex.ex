@@ -242,6 +242,12 @@ defmodule Commandex do
         or the command struct itself.
         """
         @spec run(map | Keyword.t() | t) :: t
+        def run(%unquote(__MODULE__){valid: false} = command) do
+          command
+          |> halt()
+          |> Commandex.maybe_mark_successful()
+        end
+
         def run(%unquote(__MODULE__){__meta__: %{pipelines: pipelines}} = command) do
           pipelines
           |> Enum.reduce_while(command, fn fun, acc ->

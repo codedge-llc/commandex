@@ -9,8 +9,6 @@ defmodule RegisterUser do
     param :email, :string, required: true
     param :password, :string, required: true
     param :agree_tos, :boolean, default: false
-    param :limit, :integer, min: 0, max: 50, default: 20
-    param :offset, :integer, min: 0, default: 0
 
     data :user
     data :auth

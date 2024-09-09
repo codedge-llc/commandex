@@ -7,8 +7,8 @@ defmodule FetchUserPosts do
 
   command do
     param :user_id, :integer, required: true
-    param :limit, :integer, min: 0, max: 50, default: 20
-    param :offset, :integer, min: 0, default: 0
+    param :limit, :integer, default: 20
+    param :offset, :integer, default: 0
     param :sort_by, {:array, :string}, default: ["created_at"]
     param :sort_dir, {:array, :string}, default: ["asc"]
 
@@ -16,6 +16,13 @@ defmodule FetchUserPosts do
 
     pipeline :fetch_posts
   end
+
+  # def validate(command, params, _data) do
+  #   command
+  #   |> validate_number(:limit, in: 0..100)
+  #   |> validate_number(:offset, greater_than_or_equal: 0)
+  #   |> halt_if_invalid()
+  # end
 
   def fetch_posts(command, _params, _data) do
     command

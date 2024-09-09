@@ -35,7 +35,19 @@ defmodule Commandex.Parameter do
           |> Commandex.put_error(key, :invalid)
       end
     end)
+    |> validate_required()
     |> Commandex.maybe_mark_invalid()
+  end
+
+  def validate_required(%{__meta__: %{params: schema_params}} = command) do
+    schema_params
+    |> Enum.reduce(command, fn {key, {_type, opts}}, command ->
+      case {Keyword.get(opts, :required), Map.has_key?(command.params, key)} do
+        {true, true} -> command
+        {true, false} -> Commandex.put_error(command, key, :required)
+        {_, _} -> command
+      end
+    end)
   end
 
   defp extract_params(schema_params, input_params) do
