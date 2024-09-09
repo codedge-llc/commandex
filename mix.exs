@@ -2,7 +2,7 @@ defmodule Commandex.MixProject do
   use Mix.Project
 
   @source_url "https://github.com/codedge-llc/commandex"
-  @version "0.5.0"
+  @version "0.5.1"
 
   def project do
     [
@@ -55,7 +55,7 @@ defmodule Commandex.MixProject do
   defp package do
     [
       description: "Make complex actions a first-class data type.",
-      files: ["lib", "mix.exs", "README*", "LICENSE*", "CHANGELOG*"],
+      files: ["lib", "mix.exs", ".formatter.exs", "README*", "LICENSE*", "CHANGELOG*"],
       licenses: ["MIT"],
       links: %{
         "Changelog" => "https://hexdocs.pm/commandex/changelog.html",

@@ -19,7 +19,7 @@ Add commandex as a `mix.exs` dependency:
 ```elixir
 def deps do
   [
-    {:commandex, "~> 0.5.0"}
+    {:commandex, "~> 0.5.1"}
   ]
 end
 ```
