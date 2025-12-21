@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.2] - 2025-12-21
+
+### Added
+
+- `halt/2` optionally accepts a `success: true` flag, allowing the command to halt early
+  successfully. ([#16](https://github.com/codedge-llc/commandex/pull/16))
+
 ## [0.5.1] - 2024-09-09
 
 ### Fixed
