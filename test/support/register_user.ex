@@ -13,12 +13,27 @@ defmodule RegisterUser do
     data :user
     data :auth
 
+    pipeline :check_already_registered
     pipeline :verify_tos
     pipeline :create_user
     pipeline :record_auth_attempt
     pipeline &IO.inspect/1
   end
 
+  @spec check_already_registered(t(), map(), map()) :: t()
+  def check_already_registered(command, %{email: email}, _data) do
+    case email do
+      "exists@test.com" ->
+        command
+        |> put_error(:user, :already_exists)
+        |> halt(success: true)
+
+      _other ->
+        command
+    end
+  end
+
+  @spec verify_tos(t(), map(), map()) :: t()
   def verify_tos(command, %{agree_tos: true} = _params, _data) do
     command
   end
@@ -29,6 +44,7 @@ defmodule RegisterUser do
     |> halt()
   end
 
+  @spec create_user(t(), map(), map()) :: t()
   def create_user(command, %{password: nil} = _params, _data) do
     command
     |> put_error(:password, :not_given)
@@ -39,6 +55,7 @@ defmodule RegisterUser do
     put_data(command, :user, %{email: email})
   end
 
+  @spec record_auth_attempt(t(), map(), map()) :: t()
   def record_auth_attempt(command, _params, _data) do
     put_data(command, :auth, true)
   end

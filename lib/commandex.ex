@@ -195,12 +195,12 @@ defmodule Commandex do
           `true` if the command was not halted after running all of the pipelines.
         """
         @type t :: %__MODULE__{
-                data: map,
-                errors: map,
-                halted: boolean,
-                params: map,
+                data: map(),
+                errors: map(),
+                halted: boolean(),
+                params: map(),
                 pipelines: [Commandex.pipeline()],
-                success: boolean
+                success: boolean()
               }
 
         @doc """
@@ -217,8 +217,7 @@ defmodule Commandex do
           """
           @spec run :: t
           def run do
-            new()
-            |> run()
+            new() |> run()
           end
         end
 
@@ -241,9 +240,7 @@ defmodule Commandex do
         end
 
         def run(params) do
-          params
-          |> new()
-          |> run()
+          params |> new() |> run()
         end
       end
 
@@ -364,17 +361,32 @@ defmodule Commandex do
   @doc """
   Halts a command pipeline.
 
-  Any pipelines defined after the halt will be ignored. If a command finishes running through
-  all pipelines, `:success` will be set to `true`.
+  Any pipelines defined after the halt will be ignored. By default, if a command finishes 
+  running through all pipelines, `:success` will be set to `true`.
 
       def hash_password(command, %{password: nil} = _params, _data) do
         command
         |> put_error(:password, :not_supplied)
         |> halt()
       end
+
+  ### Halting Early Successfully
+
+  Pass `success: true` as an optional argument if you would like to mark the command
+  as successful, even if there are still pipelines left to be run. Useful for returning
+  early from no-op commands.
+
+      def needs_update?(command, _params, _data) do
+        command
+        |> put_error(:update, :no_op)
+        |> halt(success: true)
+      end
   """
-  @spec halt(command) :: command
-  def halt(command), do: %{command | halted: true}
+  @spec halt(command(), Keyword.t()) :: command()
+  def halt(command, opts \\ []) do
+    success = Keyword.get(opts, :success, false)
+    %{command | halted: true, success: success}
+  end
 
   @doc false
   def maybe_mark_successful(%{halted: false} = command), do: %{command | success: true}

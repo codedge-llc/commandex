@@ -135,12 +135,19 @@ defmodule CommandexTest do
     end
   end
 
-  describe "halt/1" do
+  describe "halt/2" do
     test "ignores remaining pipelines" do
       command = RegisterUser.run(%{agree_tos: false})
 
       refute command.success
       assert command.errors === %{tos: :not_accepted}
+    end
+
+    test "handles :success option" do
+      command = RegisterUser.run(%{email: "exists@test.com"})
+
+      assert command.success
+      assert command.errors === %{user: :already_exists}
     end
   end
 
