@@ -197,7 +197,7 @@ defmodule CommandexTest do
       refute command.success
     end
 
-    test "works as a pipeline function" do
+    test "auto-inserted as first pipeline" do
       defmodule HaltOnErrorsExample do
         import Commandex
 
@@ -206,16 +206,8 @@ defmodule CommandexTest do
 
           data :result
 
-          pipeline :validate
-          pipeline &Commandex.halt_on_errors/1
           pipeline :process
         end
-
-        def validate(command, %{value: nil}, _data) do
-          put_error(command, :value, :required)
-        end
-
-        def validate(command, _params, _data), do: command
 
         def process(command, %{value: value}, _data) do
           put_data(command, :result, value * 2)
@@ -224,7 +216,7 @@ defmodule CommandexTest do
 
       halted = HaltOnErrorsExample.run(%{value: "abc"})
       assert halted.halted
-      assert halted.errors.value == :required
+      assert halted.errors.value == :invalid
 
       success = HaltOnErrorsExample.run(%{value: "42"})
       assert success.success

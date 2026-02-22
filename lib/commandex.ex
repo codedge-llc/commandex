@@ -100,15 +100,13 @@ defmodule Commandex do
   If a command does not have any parameters defined, a `run/0` will be generated
   automatically. Useful for diagnostic jobs and internal tasks.
 
-      iex> GenerateReport.run()
-      %GenerateReport{
-        __meta__: %{params: %{}, pipelines: [:fetch_data, :calculate_results]},
-        data: %{total_valid: 183220, total_invalid: 781215},
-        params: %{},
-        halted: false,
-        errors: %{},
-        success: true
-      }
+      iex> command = GenerateReport.run()
+      iex> command.success
+      true
+      iex> command.data.total_valid
+      183220
+      iex> command.data.total_invalid
+      781215
 
   ## Typed Parameters
 
@@ -208,6 +206,7 @@ defmodule Commandex do
           end
 
         data = for pair <- Module.get_attribute(__MODULE__, :data), into: %{}, do: pair
+
         pipelines = __MODULE__ |> Module.get_attribute(:pipelines) |> Enum.reverse()
 
         meta = %{params: param_schema, pipelines: pipelines}
@@ -275,14 +274,9 @@ defmodule Commandex do
         """
         @spec run(map() | Keyword.t() | t()) :: t()
         def run(%unquote(__MODULE__){__meta__: %{pipelines: pipelines}} = command) do
-          pipelines
-          |> Enum.reduce_while(command, fn fun, acc ->
-            case acc do
-              %{halted: false} -> {:cont, Commandex.apply_fun(acc, fun)}
-              _ -> {:halt, acc}
-            end
-          end)
-          |> Commandex.maybe_mark_successful()
+          command
+          |> Commandex.halt_on_errors()
+          |> Commandex.run_pipelines(pipelines)
         end
 
         def run(params) do
@@ -456,8 +450,9 @@ defmodule Commandex do
   @doc """
   Halts the command if any errors are present.
 
-  Useful as a pipeline gate after casting and custom validation pipelines
-  to aggregate all errors before stopping execution.
+  This is automatically called before pipelines run to catch any casting
+  or required validation errors from `new/1`. It can also be used explicitly
+  as a pipeline gate to aggregate custom validation errors before continuing.
 
       command do
         param :email, :string, required: true
@@ -471,6 +466,23 @@ defmodule Commandex do
   @spec halt_on_errors(command()) :: command()
   def halt_on_errors(%{errors: errors} = command) when errors == %{}, do: command
   def halt_on_errors(command), do: halt(command)
+
+  @doc false
+  @spec run_pipelines(command(), [pipeline()]) :: command()
+  def run_pipelines(%{halted: true} = command, _pipelines) do
+    command
+  end
+
+  def run_pipelines(command, pipelines) do
+    pipelines
+    |> Enum.reduce_while(command, fn fun, acc ->
+      case acc do
+        %{halted: false} -> {:cont, apply_fun(acc, fun)}
+        _ -> {:halt, acc}
+      end
+    end)
+    |> maybe_mark_successful()
+  end
 
   @doc false
   @spec maybe_mark_successful(command()) :: command()
