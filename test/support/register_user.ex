@@ -17,6 +17,7 @@ defmodule RegisterUser do
     pipeline :verify_tos
     pipeline :create_user
     pipeline :record_auth_attempt
+    # credo:disable-for-next-line Credo.Check.Warning.IoInspect
     pipeline &IO.inspect/1
   end
 

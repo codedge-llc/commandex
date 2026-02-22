@@ -14,7 +14,7 @@ defmodule Commandex.MixProject do
       elixirc_paths: elixirc_paths(Mix.env()),
       name: "Commandex",
       package: package(),
-      source_url: "https://github.com/codedge-llc/commandex",
+      source_url: @source_url,
       start_permanent: Mix.env() == :prod,
       test_coverage: test_coverage(),
       version: @version
