@@ -144,6 +144,6 @@ Git commit subjects use the [Karma style](http://karma-runner.github.io/5.0/dev/
 
 ## License
 
-Copyright (c) 2020-2025 Codedge LLC (https://www.codedge.io/)
+Copyright (c) 2020-2026 Codedge LLC (https://www.codedge.io/)
 
 This library is MIT licensed. See the [LICENSE](https://github.com/codedge-llc/commandex/blob/main/LICENSE) for details.

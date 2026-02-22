@@ -71,8 +71,8 @@ defmodule Commandex do
 
   `&run/1` takes a command struct and runs it through the pipeline functions defined
   in the command. **Functions are executed in the order in which they are defined**.
-  If a command passes through all pipelines without calling `halt/1`, `:success` 
-  will be set to `true`. Otherwise, subsequent pipelines after the `halt/1` will 
+  If a command passes through all pipelines without calling `halt/1`, `:success`
+  will be set to `true`. Otherwise, subsequent pipelines after the `halt/1` will
   be ignored and `:success` will be set to `false`.
 
       %{email: "example@example.com", password: "asdf1234"}
@@ -112,17 +112,17 @@ defmodule Commandex do
 
   - `pipeline :do_work` - Name of a function inside the command's module, arity three.
   - `pipeline {YourModule, :do_work}` - Arity three.
-  - `pipeline {YourModule, :do_work, [:additonal, "args"]}` - Arity three plus the 
+  - `pipeline {YourModule, :do_work, [:additonal, "args"]}` - Arity three plus the
     number of additional args given.
   - `pipeline &YourModule.do_work/1` - Or any anonymous function of arity one.
   - `pipeline &YourModule.do_work/3` - Or any anonymous function of arity three.
   """
   @type pipeline ::
-          atom
-          | {module, atom}
-          | {module, atom, [any]}
-          | (command :: struct -> command :: struct)
-          | (command :: struct, params :: map, data :: map -> command :: struct)
+          atom()
+          | {module(), atom()}
+          | {module(), atom(), [any()]}
+          | (command :: struct() -> command :: struct())
+          | (command :: struct(), params :: map(), data :: map() -> command :: struct())
 
   @typedoc """
   Command struct.
@@ -138,19 +138,19 @@ defmodule Commandex do
     `true` if the command was not halted after running all of the pipelines.
   """
   @type command :: %{
-          __struct__: atom,
-          data: map,
-          errors: map,
-          halted: boolean,
-          params: map,
+          __struct__: atom(),
+          data: map(),
+          errors: map(),
+          halted: boolean(),
+          params: map(),
           pipelines: [pipeline()],
-          success: boolean
+          success: boolean()
         }
 
   @doc """
   Defines a command struct with params, data, and pipelines.
   """
-  @spec command(do: any) :: no_return
+  @spec command(do: any()) :: no_return()
   defmacro command(do: block) do
     prelude =
       quote do
@@ -206,7 +206,7 @@ defmodule Commandex do
         @doc """
         Creates a new struct from given parameters.
         """
-        @spec new(map | Keyword.t()) :: t
+        @spec new(map() | Keyword.t()) :: t()
         def new(opts \\ []) do
           Commandex.parse_params(%__MODULE__{}, opts)
         end
@@ -215,7 +215,7 @@ defmodule Commandex do
           @doc """
           Runs given pipelines in order and returns command struct.
           """
-          @spec run :: t
+          @spec run() :: t()
           def run do
             new() |> run()
           end
@@ -227,7 +227,7 @@ defmodule Commandex do
         `run/1` can either take parameters that would be passed to `new/1`
         or the command struct itself.
         """
-        @spec run(map | Keyword.t() | t) :: t
+        @spec run(map() | Keyword.t() | t()) :: t()
         def run(%unquote(__MODULE__){pipelines: pipelines} = command) do
           pipelines
           |> Enum.reduce_while(command, fn fun, acc ->
@@ -263,7 +263,7 @@ defmodule Commandex do
         # ...pipelines
       end
   """
-  @spec param(atom, Keyword.t()) :: no_return
+  @spec param(atom(), Keyword.t()) :: no_return()
   defmacro param(name, opts \\ []) do
     quote do
       Commandex.__param__(__MODULE__, unquote(name), unquote(opts))
@@ -284,7 +284,7 @@ defmodule Commandex do
         # ...pipelines
       end
   """
-  @spec data(atom) :: no_return
+  @spec data(atom()) :: no_return()
   defmacro data(name) do
     quote do
       Commandex.__data__(__MODULE__, unquote(name))
@@ -297,7 +297,7 @@ defmodule Commandex do
   Pipelines are functions executed against the command, *in the order in which they are defined*.
 
   For example, two pipelines could be defined:
-    
+
       pipeline :check_valid_email
       pipeline :create_user
 
@@ -311,12 +311,12 @@ defmodule Commandex do
 
   - `pipeline :do_work` - Name of a function inside the command's module, arity three.
   - `pipeline {YourModule, :do_work}` - Arity three.
-  - `pipeline {YourModule, :do_work, [:additonal, "args"]}` - Arity three plus the 
+  - `pipeline {YourModule, :do_work, [:additonal, "args"]}` - Arity three plus the
     number of additional args given.
   - `pipeline &YourModule.do_work/1` - Or any anonymous function of arity one.
   - `pipeline &YourModule.do_work/3` - Or any anonymous function of arity three.
   """
-  @spec pipeline(atom) :: no_return
+  @spec pipeline(atom()) :: no_return()
   defmacro pipeline(name) do
     quote do
       Commandex.__pipeline__(__MODULE__, unquote(name))
@@ -337,7 +337,7 @@ defmodule Commandex do
         put_data(command, :password_hash, Base.encode64(password))
       end
   """
-  @spec put_data(command, atom, any) :: command
+  @spec put_data(command(), atom(), any()) :: command()
   def put_data(%{data: data} = command, key, val) do
     %{command | data: Map.put(data, key, val)}
   end
@@ -353,7 +353,7 @@ defmodule Commandex do
         |> halt()
       end
   """
-  @spec put_error(command, any, any) :: command
+  @spec put_error(command(), any(), any()) :: command()
   def put_error(%{errors: error} = command, key, val) do
     %{command | errors: Map.put(error, key, val)}
   end
@@ -361,7 +361,7 @@ defmodule Commandex do
   @doc """
   Halts a command pipeline.
 
-  Any pipelines defined after the halt will be ignored. By default, if a command finishes 
+  Any pipelines defined after the halt will be ignored. By default, if a command finishes
   running through all pipelines, `:success` will be set to `true`.
 
       def hash_password(command, %{password: nil} = _params, _data) do
@@ -389,10 +389,12 @@ defmodule Commandex do
   end
 
   @doc false
+  @spec maybe_mark_successful(command()) :: command()
   def maybe_mark_successful(%{halted: false} = command), do: %{command | success: true}
   def maybe_mark_successful(command), do: command
 
   @doc false
+  @spec parse_params(command(), map() | Keyword.t()) :: command()
   def parse_params(%{params: p} = struct, params) when is_list(params) do
     params = for {key, _} <- p, into: %{}, do: {key, Keyword.get(params, key, p[key])}
     %{struct | params: params}
@@ -404,6 +406,7 @@ defmodule Commandex do
   end
 
   @doc false
+  @spec apply_fun(command(), pipeline()) :: command()
   def apply_fun(%mod{params: params, data: data} = command, name) when is_atom(name) do
     :erlang.apply(mod, name, [command, params, data])
   end
@@ -424,6 +427,8 @@ defmodule Commandex do
     :erlang.apply(m, f, [command, params, data] ++ a)
   end
 
+  @doc false
+  @spec __param__(module(), atom(), Keyword.t()) :: :ok
   def __param__(mod, name, opts) do
     params = Module.get_attribute(mod, :params)
 
@@ -435,6 +440,8 @@ defmodule Commandex do
     Module.put_attribute(mod, :params, {name, default})
   end
 
+  @doc false
+  @spec __data__(module(), atom()) :: :ok
   def __data__(mod, name) do
     data = Module.get_attribute(mod, :data)
 
@@ -445,6 +452,8 @@ defmodule Commandex do
     Module.put_attribute(mod, :data, {name, nil})
   end
 
+  @doc false
+  @spec __pipeline__(module(), pipeline()) :: :ok
   def __pipeline__(mod, name) when is_atom(name) do
     Module.put_attribute(mod, :pipelines, name)
   end
@@ -469,6 +478,7 @@ defmodule Commandex do
     raise ArgumentError, "pipeline #{inspect(name)} is not valid"
   end
 
+  @spec get_param(map(), atom(), term()) :: term()
   defp get_param(params, key, default) do
     case Map.get(params, key) do
       nil ->
