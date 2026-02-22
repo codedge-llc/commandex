@@ -36,9 +36,9 @@ defmodule CommandexTest do
 
     test "handles string-key map params correctly" do
       params = %{
-        email: @email,
-        password: @password,
-        agree_tos: @agree_tos
+        "email" => @email,
+        "password" => @password,
+        "agree_tos" => @agree_tos
       }
 
       command = RegisterUser.new(params)
@@ -91,35 +91,32 @@ defmodule CommandexTest do
 
   describe "pipeline/1 macro" do
     test "accepts valid pipeline arguments" do
-      try do
-        defmodule ExamplePipelineValid do
-          import Commandex
+      defmodule ExamplePipelineValid do
+        import Commandex
 
-          command do
-            pipeline :example
-            pipeline {ExamplePipelineValid, :example}
-            pipeline {ExamplePipelineValid, :example_args, ["test"]}
-            pipeline &ExamplePipelineValid.example_single/1
-            pipeline &ExamplePipelineValid.example/3
-          end
-
-          def example(command, _params, _data) do
-            command
-          end
-
-          def example_single(command) do
-            command
-          end
-
-          def example_args(command, _params, _data, _custom_value) do
-            command
-          end
+        command do
+          pipeline :example
+          pipeline {ExamplePipelineValid, :example}
+          pipeline {ExamplePipelineValid, :example_args, ["test"]}
+          pipeline &ExamplePipelineValid.example_single/1
+          pipeline &ExamplePipelineValid.example/3
         end
 
-        ExamplePipelineValid.run()
-      rescue
-        FunctionClauseError -> flunk("Should not raise.")
+        def example(command, _params, _data) do
+          command
+        end
+
+        def example_single(command) do
+          command
+        end
+
+        def example_args(command, _params, _data, _custom_value) do
+          command
+        end
       end
+
+      command = ExamplePipelineValid.run()
+      assert command.success
     end
 
     test "raises if invalid argument defined" do
@@ -135,7 +132,23 @@ defmodule CommandexTest do
     end
   end
 
+  describe "halt/1" do
+    test "sets halted to true and success to false" do
+      command = Commandex.halt(RegisterUser.new())
+
+      assert command.halted
+      refute command.success
+    end
+  end
+
   describe "halt/2" do
+    test "sets success to true when option given" do
+      command = Commandex.halt(RegisterUser.new(), success: true)
+
+      assert command.halted
+      assert command.success
+    end
+
     test "ignores remaining pipelines" do
       command = RegisterUser.run(%{agree_tos: false})
 
@@ -143,7 +156,7 @@ defmodule CommandexTest do
       assert command.errors === %{tos: :not_accepted}
     end
 
-    test "handles :success option" do
+    test "handles :success option in pipeline" do
       command = RegisterUser.run(%{email: "exists@test.com"})
 
       assert command.success
@@ -166,10 +179,87 @@ defmodule CommandexTest do
     end
   end
 
+  describe "new/1" do
+    test "uses defaults when no params given" do
+      command = RegisterUser.new()
+      assert command.params.email == "test@test.com"
+      refute command.params.password
+      refute command.params.agree_tos
+    end
+  end
+
+  describe "put_data/3" do
+    test "sets data field on command" do
+      command = RegisterUser.new()
+      updated = Commandex.put_data(command, :user, %{id: 1})
+      assert updated.data.user == %{id: 1}
+    end
+
+    test "overwrites existing data field" do
+      command = RegisterUser.new()
+
+      updated =
+        command
+        |> Commandex.put_data(:user, %{id: 1})
+        |> Commandex.put_data(:user, %{id: 2})
+
+      assert updated.data.user == %{id: 2}
+    end
+  end
+
+  describe "put_error/3" do
+    test "sets error on command" do
+      command = RegisterUser.new()
+      updated = Commandex.put_error(command, :email, :invalid)
+      assert updated.errors.email == :invalid
+    end
+
+    test "overwrites existing error for same key" do
+      command = RegisterUser.new()
+
+      updated =
+        command
+        |> Commandex.put_error(:email, :invalid)
+        |> Commandex.put_error(:email, :taken)
+
+      assert updated.errors.email == :taken
+    end
+  end
+
+  describe "run/1" do
+    test "succeeds when all pipelines pass" do
+      command = RegisterUser.run(%{email: "new@test.com", password: "pass", agree_tos: true})
+
+      assert command.success
+      refute command.halted
+      assert command.data.user == %{email: "new@test.com"}
+      assert command.data.auth == true
+      assert command.errors == %{}
+    end
+
+    test "accepts a pre-built struct" do
+      command =
+        RegisterUser.new(%{email: "new@test.com", password: "pass", agree_tos: true})
+        |> RegisterUser.run()
+
+      assert command.success
+      assert command.data.user == %{email: "new@test.com"}
+    end
+
+    test "halted command does not run subsequent pipelines" do
+      command = RegisterUser.run(%{agree_tos: false})
+
+      refute command.success
+      assert command.halted
+      assert command.errors == %{tos: :not_accepted}
+      refute command.data.user
+      refute command.data.auth
+    end
+  end
+
   defp assert_params(command) do
     assert command.params.email == @email
     assert command.params.password == @password
-    # Don't use refute here because nil fails the test.
     assert command.params.agree_tos == @agree_tos
   end
 end
