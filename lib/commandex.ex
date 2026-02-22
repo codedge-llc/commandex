@@ -85,7 +85,7 @@ defmodule Commandex do
         %{success: false, errors: %{password: :not_given}} ->
           # Respond with a 400 or something
 
-        %{success: false, errors: _error} ->
+        %{success: false, errors: _errors} ->
           # I'm a lazy programmer that writes catch-all error handling
       end
 
@@ -112,7 +112,7 @@ defmodule Commandex do
 
   - `pipeline :do_work` - Name of a function inside the command's module, arity three.
   - `pipeline {YourModule, :do_work}` - Arity three.
-  - `pipeline {YourModule, :do_work, [:additonal, "args"]}` - Arity three plus the
+  - `pipeline {YourModule, :do_work, [:additional, "args"]}` - Arity three plus the
     number of additional args given.
   - `pipeline &YourModule.do_work/1` - Or any anonymous function of arity one.
   - `pipeline &YourModule.do_work/3` - Or any anonymous function of arity three.
@@ -151,6 +151,7 @@ defmodule Commandex do
   Defines a command struct with params, data, and pipelines.
   """
   @spec command(do: any()) :: no_return()
+  # credo:disable-for-next-line Credo.Check.Refactor.CyclomaticComplexity
   defmacro command(do: block) do
     prelude =
       quote do
@@ -311,7 +312,7 @@ defmodule Commandex do
 
   - `pipeline :do_work` - Name of a function inside the command's module, arity three.
   - `pipeline {YourModule, :do_work}` - Arity three.
-  - `pipeline {YourModule, :do_work, [:additonal, "args"]}` - Arity three plus the
+  - `pipeline {YourModule, :do_work, [:additional, "args"]}` - Arity three plus the
     number of additional args given.
   - `pipeline &YourModule.do_work/1` - Or any anonymous function of arity one.
   - `pipeline &YourModule.do_work/3` - Or any anonymous function of arity three.
@@ -330,7 +331,7 @@ defmodule Commandex do
 
       data :password_hash
 
-  Set the password pash in one of your pipeline functions:
+  Set the password hash in one of your pipeline functions:
 
       def hash_password(command, %{password: password} = _params, _data) do
         # Better than plaintext, I guess
