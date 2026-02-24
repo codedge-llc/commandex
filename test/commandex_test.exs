@@ -382,9 +382,9 @@ defmodule CommandexTest do
       import Commandex
 
       command do
-        param(:email, :string, required: true)
+        param :email, :string, required: true
         param :name, :string
-        param(:age, :integer, required: true)
+        param :age, :integer, required: true
       end
     end
 
@@ -407,7 +407,7 @@ defmodule CommandexTest do
     test ":invalid takes precedence over :required for failed casts" do
       command = RequiredParams.new(%{email: "a@b.com", age: "not_a_number"})
 
-      assert command.errors.age == :required
+      assert command.errors.age == :invalid
     end
   end
 
@@ -416,8 +416,8 @@ defmodule CommandexTest do
       import Commandex
 
       command do
-        param(:email, :string, required: true)
-        param(:age, :integer, required: true)
+        param :email, :string, required: true
+        param :age, :integer, required: true
         param :score, :float
       end
     end
@@ -426,7 +426,7 @@ defmodule CommandexTest do
       command = MultiError.new(%{age: "bad", score: "bad"})
 
       assert command.errors.email == :required
-      assert command.errors.age == :required
+      assert command.errors.age == :invalid
       assert command.errors.score == :invalid
       assert map_size(command.errors) == 3
     end
@@ -506,7 +506,7 @@ defmodule CommandexTest do
 
       command do
         param :name, CommandexTest.UpperString
-        param(:role, CommandexTest.Role, required: true)
+        param :role, CommandexTest.Role, required: true
       end
     end
 
@@ -527,14 +527,14 @@ defmodule CommandexTest do
       command = CustomTypeCommand.new(%{role: "superadmin"})
 
       refute command.params.role
-      assert command.errors.role == :required
+      assert command.errors.role == :invalid
     end
 
     test "rejects non-string non-atom values" do
       command = CustomTypeCommand.new(%{role: 123})
 
       refute command.params.role
-      assert command.errors.role == :required
+      assert command.errors.role == :invalid
     end
 
     test "returns :invalid on custom type cast failure" do
@@ -604,8 +604,8 @@ defmodule CommandexTest do
       import Commandex
 
       command do
-        param(:score, :float, default: 0.0)
-        param(:name, :string, default: "Anonymous")
+        param :score, :float, default: 0.0
+        param :name, :string, default: "Anonymous"
       end
     end
 

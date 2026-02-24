@@ -40,7 +40,7 @@ defmodule Commandex.Parameter do
 
   @spec check_required(struct(), atom(), Keyword.t()) :: struct()
   defp check_required(command, key, opts) do
-    if Keyword.get(opts, :required, false) do
+    if Keyword.get(opts, :required, false) and not Map.has_key?(command.errors, key) do
       case get_in(command, [Access.key!(:params), Access.key!(key)]) do
         nil -> Commandex.put_error(command, key, :required)
         _ -> command
