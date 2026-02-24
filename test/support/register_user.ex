@@ -6,9 +6,9 @@ defmodule RegisterUser do
   import Commandex
 
   command do
-    param :email, default: "test@test.com"
-    param :password
-    param :agree_tos
+    param(:email, :string, default: "test@test.com")
+    param :password, :string
+    param :agree_tos, :boolean
 
     data :user
     data :auth
