@@ -905,7 +905,7 @@ defmodule CommandexTest do
   end
 
   describe "type with options" do
-    defmodule ApiEnum do
+    defmodule APIEnum do
       @behaviour Commandex.Type
 
       @type t :: atom()
@@ -914,7 +914,7 @@ defmodule CommandexTest do
       def init(opts) do
         case Keyword.fetch(opts, :values) do
           {:ok, values} -> Map.merge(from_api(values), Map.new(values, &{&1, &1}))
-          :error -> raise ArgumentError, "ApiEnum needs the :values option"
+          :error -> raise ArgumentError, "APIEnum needs the :values option"
         end
       end
 
@@ -942,10 +942,10 @@ defmodule CommandexTest do
       import Commandex
 
       command do
-        param :status, CommandexTest.ApiEnum, values: [:active, :pending_review], required: true
-        param :sort, CommandexTest.ApiEnum, values: [:asc, :desc], default: :asc
-        param :tags, {:array, CommandexTest.ApiEnum}, values: [:new, :sale]
-        param :flags, {:map, CommandexTest.ApiEnum}, values: [:on, :off]
+        param :status, CommandexTest.APIEnum, values: [:active, :pending_review], required: true
+        param :sort, CommandexTest.APIEnum, values: [:asc, :desc], default: :asc
+        param :tags, {:array, CommandexTest.APIEnum}, values: [:new, :sale]
+        param :flags, {:map, CommandexTest.APIEnum}, values: [:on, :off]
       end
     end
 
@@ -1017,7 +1017,7 @@ defmodule CommandexTest do
 
       assert type ==
                {:parameterized,
-                {ApiEnum, %{:asc => :asc, :desc => :desc, "ASC" => :asc, "DESC" => :desc}}}
+                {APIEnum, %{:asc => :asc, :desc => :desc, "ASC" => :asc, "DESC" => :desc}}}
 
       assert opts == []
     end
@@ -1035,12 +1035,12 @@ defmodule CommandexTest do
     end
 
     test "an error in init/1 shows at compile time" do
-      assert_raise ArgumentError, "ApiEnum needs the :values option", fn ->
+      assert_raise ArgumentError, "APIEnum needs the :values option", fn ->
         defmodule ExampleBadTypeOption do
           import Commandex
 
           command do
-            param :status, CommandexTest.ApiEnum, vales: [:active]
+            param :status, CommandexTest.APIEnum, vales: [:active]
           end
         end
       end

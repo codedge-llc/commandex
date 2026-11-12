@@ -20,7 +20,7 @@ defmodule Commandex.Type.NaiveDateTime do
   def cast(%NaiveDateTime{} = value), do: {:ok, value}
 
   def cast(%DateTime{} = value) do
-    case Commandex.Type.UtcDateTime.cast(value) do
+    case Commandex.Type.UTCDateTime.cast(value) do
       {:ok, datetime} -> {:ok, DateTime.to_naive(datetime)}
       :error -> :error
     end

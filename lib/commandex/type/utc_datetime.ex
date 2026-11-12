@@ -1,4 +1,4 @@
-defmodule Commandex.Type.UtcDateTime do
+defmodule Commandex.Type.UTCDateTime do
   @moduledoc """
   Casts values to datetimes in UTC.
 
