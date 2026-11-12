@@ -5,6 +5,33 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+### Added
+
+- `param/3` accepts a type, and `new/1` casts the value to that type. A parameter
+  without a type works as before. ([#19](https://github.com/codedge-llc/commandex/pull/19))
+- Built-in types: `:any`, `:binary`, `:boolean`, `:date`, `:decimal`, `:float`,
+  `:integer`, `:map`, `:naive_datetime`, `:naive_datetime_usec`, `:string`, `:time`,
+  `:time_usec`, `:utc_datetime`, `:utc_datetime_usec`, `{:array, type}`, and
+  `{:map, type}`. The `:decimal` type needs the optional `:decimal` package,
+  version 3.0 or later.
+- `Commandex.Type` behaviour for custom types. A type can take options from the
+  `param` line through the `init/1` and `cast/2` callbacks.
+- `:required` option for `param`. A required parameter without a value gets a
+  `:required` error.
+- `new/1` adds an `:invalid` error for a value that does not cast, and halts a
+  command that has an `:invalid` or `:required` error.
+- `param` raises an `ArgumentError` at compile time for an unknown type, an unknown
+  option, or a default that is not valid for the type.
+- `Commandex.halt_on_errors/1` halts a command that has errors.
+- Command structs have a `__meta__` field that holds a `Commandex.Metadata` struct
+  with the parameter types.
+
+### Changed
+
+- Minimum supported Elixir version is now 1.16.
+
 ## [0.5.2] - 2025-12-21
 
 ### Added

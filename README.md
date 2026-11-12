@@ -33,8 +33,8 @@ defmodule RegisterUser do
   import Commandex
 
   command do
-    param :email
-    param :password
+    param :email, :string, required: true
+    param :password, :string
 
     data :password_hash
     data :user
@@ -75,6 +75,7 @@ The `command/1` macro will define a struct that looks like:
 
 ```elixir
 %RegisterUser{
+  __meta__: #Commandex.Metadata<2 params>,
   success: false,
   halted: false,
   errors: %{},
@@ -92,7 +93,8 @@ As well as two functions:
 ```
 
 `&new/1` parses parameters into a new struct. These can be either a keyword list
-or map with atom/string keys.
+or map with atom/string keys. If a parameter has a type, `&new/1` casts the value
+to that type.
 
 `&run/1` takes a command struct and runs it through the pipeline functions defined
 in the command. Functions are executed _in the order in which they are defined_.
@@ -124,6 +126,50 @@ the params directly into `&run/1` without using `&new/1`:
 ```elixir
 %{email: "example@example.com", password: "asdf1234"}
 |> RegisterUser.run()
+```
+
+## Typed Parameters
+
+A parameter can declare a type. `&new/1` casts the value to that type. The
+built-in types follow the cast rules of Ecto, so `"42"` is a valid `:integer`
+and `42.0` is not.
+
+```elixir
+command do
+  param :email, :string, required: true
+  param :age, :integer
+  param :starts_on, :date
+  param :price, :decimal, default: "0.00"
+  param :tags, {:array, :string}
+  param :status, MyApp.Types.Enum, values: [:active, :pending_review]
+  param :note
+end
+```
+
+A parameter without a type, such as `:note`, keeps its value as given.
+
+The built-in types are `:any`, `:binary`, `:boolean`, `:date`, `:decimal`, `:float`,
+`:integer`, `:map`, `:naive_datetime`, `:naive_datetime_usec`, `:string`, `:time`,
+`:time_usec`, `:utc_datetime`, `:utc_datetime_usec`, `{:array, type}`, and
+`{:map, type}`. The `:decimal` type needs the optional
+[decimal](https://hex.pm/packages/decimal) package, version 3.0 or later.
+
+A module that implements the `Commandex.Type` behaviour can also be a type. See the
+[Commandex.Type documentation](https://hexdocs.pm/commandex/Commandex.Type.html) for
+an example, and for types that take options such as `MyApp.Types.Enum` above.
+
+If a cast fails, the parameter keeps its default and gets an `:invalid` error. If a
+parameter with `required: true` has no value, it gets a `:required` error. `&new/1`
+halts a command that has an error, so `&run/1` does not run its pipelines.
+
+```elixir
+command = RegisterUser.run(%{password: 42})
+
+command.success
+#=> false
+
+command.errors
+#=> %{email: :required, password: :invalid}
 ```
 
 ## Contributing
