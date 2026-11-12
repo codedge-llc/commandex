@@ -28,6 +28,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Command structs have a `__meta__` field that holds a `Commandex.Metadata` struct
   with the parameter types.
 
+### Changed
+
+- Minimum supported Elixir version is now 1.16.
+
 ## [0.5.2] - 2025-12-21
 
 ### Added

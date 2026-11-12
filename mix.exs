@@ -10,7 +10,7 @@ defmodule Commandex.MixProject do
       deps: deps(),
       dialyzer: dialyzer(),
       docs: docs(),
-      elixir: "~> 1.9",
+      elixir: "~> 1.16",
       elixirc_paths: elixirc_paths(Mix.env()),
       name: "Commandex",
       package: package(),
@@ -45,7 +45,7 @@ defmodule Commandex.MixProject do
         "CHANGELOG.md",
         LICENSE: [title: "License"]
       ],
-      formatters: ["html"],
+      formatters: ["html", "markdown"],
       main: "Commandex",
       skip_undefined_reference_warnings_on: ["CHANGELOG.md"],
       source_ref: "v#{@version}",
