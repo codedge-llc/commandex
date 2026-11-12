@@ -1,6 +1,9 @@
 defmodule Commandex.Type.Integer do
   @moduledoc """
   Casts values to integers.
+
+  Accepts an integer or a string that holds an integer, such as `"42"`.
+  A float is not valid.
   """
 
   @behaviour Commandex.Type
@@ -18,6 +21,5 @@ defmodule Commandex.Type.Integer do
     end
   end
 
-  def cast(value) when is_float(value), do: {:ok, trunc(value)}
   def cast(_), do: :error
 end

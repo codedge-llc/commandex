@@ -14,7 +14,7 @@ defmodule Commandex do
 
         command do
           param :email, :string, required: true
-          param :password, :string, required: true
+          param :password, :string
 
           data :password_hash
           data :user
@@ -53,15 +53,13 @@ defmodule Commandex do
   The `command/1` macro will define a struct that looks like:
 
       %RegisterUser{
-        __meta__: %{
-          params: %{email: {:string, [required: true]}, password: {:string, [required: true]}},
-          pipelines: [:hash_password, :create_user, :send_welcome_email]
-        },
+        __meta__: #Commandex.Metadata<2 params>,
         success: false,
         halted: false,
         errors: %{},
         params: %{email: nil, password: nil},
-        data: %{password_hash: nil, user: nil}
+        data: %{password_hash: nil, user: nil},
+        pipelines: [:hash_password, :create_user, :send_welcome_email]
       }
 
   As well as two functions:
@@ -71,9 +69,10 @@ defmodule Commandex do
 
   `&new/1` parses and casts parameters into a new struct. These can be either a
   keyword list or map with atom/string keys. If a parameter has a type declared,
-  the value will be cast to that type. If the cast fails, the parameter is set to
-  `nil` and an `:invalid` error is added. If a parameter is marked as `required: true`
-  and its value is `nil` after casting, a `:required` error is added.
+  the value will be cast to that type. If the cast fails, the parameter keeps its
+  default and an `:invalid` error is added. If a parameter is marked as `required: true`
+  and its value is `nil` after casting, a `:required` error is added. A command with
+  either error is halted, so `&run/1` does not run any pipelines.
 
   `&run/1` takes a command struct and runs it through the pipeline functions defined
   in the command. **Functions are executed in the order in which they are defined**.
@@ -110,19 +109,76 @@ defmodule Commandex do
 
   ## Typed Parameters
 
-  Parameters can declare a type for automatic casting:
+  A parameter can declare a type. `&new/1` casts the value to that type:
 
       param :age, :integer
       param :email, :string, required: true
       param :score, :float, default: 0.0
+      param :starts_on, :date
+      param :tags, {:array, :string}
+      param :counts, {:map, :integer}
 
-  Built-in types: `:string`, `:integer`, `:float`, `:boolean`, `:any`.
-  Use `{:array, type}` for lists: `param :tags, {:array, :string}`.
+  A parameter without a type has the `:any` type. `&new/1` does not cast
+  it and keeps the value as given.
 
-  Custom type modules implementing the `Commandex.Type` behaviour (or any module
-  with a compatible `cast/1` function, such as an Ecto type) can also be used:
+  ### Built-in types
+
+  | Type                   | Value after the cast                     |
+  | ---------------------- | ---------------------------------------- |
+  | `:any`                 | The value as given                       |
+  | `:binary`              | A binary                                 |
+  | `:boolean`             | `true` or `false`                        |
+  | `:date`                | A `Date`                                 |
+  | `:decimal`             | A `Decimal`                              |
+  | `:float`               | A float                                  |
+  | `:integer`             | An integer                               |
+  | `:map`                 | A map                                    |
+  | `:naive_datetime`      | A `NaiveDateTime` without microseconds   |
+  | `:naive_datetime_usec` | A `NaiveDateTime` with microseconds      |
+  | `:string`              | A string                                 |
+  | `:time`                | A `Time` without microseconds            |
+  | `:time_usec`           | A `Time` with microseconds               |
+  | `:utc_datetime`        | A `DateTime` in UTC without microseconds |
+  | `:utc_datetime_usec`   | A `DateTime` in UTC with microseconds    |
+  | `{:array, type}`       | A list of values of the inner type       |
+  | `{:map, type}`         | A map with values of the inner type      |
+
+  The built-in types follow the cast rules of Ecto. For example, `:integer`
+  accepts `42` and `"42"`, and does not accept `42.0`.
+
+  The `:decimal` type needs the optional `:decimal` package, version 3.0
+  or later.
+
+  ### Custom types
+
+  A module that implements the `Commandex.Type` behaviour can be the type of
+  a parameter. A type can also take options from the `param` line:
 
       param :color, MyApp.Types.Color
+      param :status, MyApp.Types.Enum, values: [:active, :pending_review]
+
+  See `Commandex.Type` for how to write each kind of type.
+
+  ### Empty values
+
+  For a typed parameter, a string that is empty or has only whitespace is
+  an empty value. `&new/1` does not cast an empty value, and the parameter
+  keeps its default. An array drops its empty elements. A `:binary`
+  parameter is empty only for `""`.
+
+  ### Errors
+
+  If a cast fails, the parameter keeps its default and gets an `:invalid`
+  error. If a parameter with `required: true` is `nil` after the cast, it
+  gets a `:required` error. `&new/1` halts a command that has an error.
+
+      command = RegisterUser.new(%{password: 42})
+
+      command.errors
+      #=> %{email: :required, password: :invalid}
+
+      command.halted
+      #=> true
   """
 
   @typedoc """
@@ -149,21 +205,23 @@ defmodule Commandex do
 
   ## Attributes
 
-  - `__meta__` - Compile-time schema containing param types and pipeline definitions.
+  - `__meta__` - Compile-time metadata with the parameter types. See `Commandex.Metadata`.
   - `data` - Data generated during the pipeline, defined by `Commandex.data/1`.
   - `errors` - Errors generated during the pipeline with `Commandex.put_error/3`
   - `halted` - Whether or not the pipeline was halted.
   - `params` - Parameters given to the command, defined by `Commandex.param/1`.
+  - `pipelines` - A list of pipeline functions to execute, defined by `Commandex.pipeline/1`.
   - `success` - Whether or not the command was successful. This is only set to
     `true` if the command was not halted after running all of the pipelines.
   """
   @type command :: %{
           __struct__: atom(),
-          __meta__: map(),
+          __meta__: Commandex.Metadata.t(),
           data: map(),
           errors: map(),
           halted: boolean(),
           params: map(),
+          pipelines: [pipeline()],
           success: boolean()
         }
 
@@ -202,23 +260,24 @@ defmodule Commandex do
 
         param_schema =
           for {name, {type, opts}} <- raw_params, into: %{} do
-            {name, {type, Keyword.delete(opts, :default)}}
+            {name, {type, Keyword.take(opts, [:required])}}
           end
 
         data = for pair <- Module.get_attribute(__MODULE__, :data), into: %{}, do: pair
 
         pipelines = __MODULE__ |> Module.get_attribute(:pipelines) |> Enum.reverse()
 
-        meta = %{params: param_schema, pipelines: pipelines}
+        meta = %Commandex.Metadata{params: param_schema}
 
         Module.put_attribute(__MODULE__, :struct_fields, {:__meta__, meta})
         Module.put_attribute(__MODULE__, :struct_fields, {:params, param_defaults})
         Module.put_attribute(__MODULE__, :struct_fields, {:data, data})
+        Module.put_attribute(__MODULE__, :struct_fields, {:pipelines, pipelines})
         defstruct @struct_fields
 
         param_type_specs =
           for {name, {type, _opts}} <- raw_params do
-            {name, Commandex.type_to_spec(type)}
+            {name, Commandex.Type.to_spec(type)}
           end
 
         data_type_specs =
@@ -231,20 +290,22 @@ defmodule Commandex do
 
         ## Attributes
 
-        - `__meta__` - Compile-time schema containing param types and pipeline definitions.
+        - `__meta__` - Compile-time metadata with the parameter types. See `Commandex.Metadata`.
         - `data` - Data generated during the pipeline, defined by `Commandex.data/1`.
         - `errors` - Errors generated during the pipeline with `Commandex.put_error/3`
         - `halted` - Whether or not the pipeline was halted.
         - `params` - Parameters given to the command, defined by `Commandex.param/1`.
+        - `pipelines` - A list of pipeline functions to execute, defined by `Commandex.pipeline/1`.
         - `success` - Whether or not the command was successful. This is only set to
           `true` if the command was not halted after running all of the pipelines.
         """
         @type t :: %__MODULE__{
-                __meta__: map(),
+                __meta__: Commandex.Metadata.t(),
                 data: %{unquote_splicing(data_type_specs)},
                 errors: map(),
                 halted: boolean(),
                 params: %{unquote_splicing(param_type_specs)},
+                pipelines: [Commandex.pipeline()],
                 success: boolean()
               }
 
@@ -253,7 +314,9 @@ defmodule Commandex do
         """
         @spec new(map() | Keyword.t()) :: t()
         def new(opts \\ []) do
-          Commandex.Parameter.cast_params(%__MODULE__{}, opts)
+          %__MODULE__{}
+          |> Commandex.Parameter.cast_params(opts)
+          |> Commandex.halt_on_errors()
         end
 
         if Enum.empty?(param_defaults) do
@@ -273,10 +336,8 @@ defmodule Commandex do
         or the command struct itself.
         """
         @spec run(map() | Keyword.t() | t()) :: t()
-        def run(%unquote(__MODULE__){__meta__: %{pipelines: pipelines}} = command) do
-          command
-          |> Commandex.halt_on_errors()
-          |> Commandex.run_pipelines(pipelines)
+        def run(%unquote(__MODULE__){pipelines: pipelines} = command) do
+          Commandex.run_pipelines(command, pipelines)
         end
 
         def run(params) do
@@ -304,7 +365,7 @@ defmodule Commandex do
 
   ## Typed
 
-  Typed parameters are automatically cast in `new/1`:
+  `new/1` casts a typed parameter to its type:
 
       command do
         param :email, :string, required: true
@@ -312,17 +373,35 @@ defmodule Commandex do
         param :score, :float, default: 0.0
         param :tags, {:array, :string}
         param :color, MyApp.Types.Color
+        param :status, MyApp.Types.Enum, values: [:active, :pending_review]
       end
 
-  Built-in types: `:string`, `:integer`, `:float`, `:boolean`, `:any`.
+  The type is a built-in type or a module that implements `Commandex.Type`.
+  See the "Typed Parameters" section of the `Commandex` module for the list
+  of built-in types.
 
   ## Options
 
-  - `:default` - Default value if not provided. Defaults to `nil`.
+  - `:default` - Default value if not provided. Defaults to `nil`. A typed
+    parameter casts its default at compile time.
   - `:required` - If `true`, adds a `:required` error when the value is `nil`
     after casting.
+
+  A type with options also gets every option on the line. Each other
+  parameter raises an `ArgumentError` at compile time for an option that
+  is not in this list.
+
+  ## Compile-time checks
+
+  `param` raises an `ArgumentError` at compile time in these cases:
+
+  - The type is not a built-in type or a module that implements
+    `Commandex.Type`.
+  - An option is not valid.
+  - The default is not valid for the type.
+  - The type is `:decimal` and the `:decimal` package is not installed.
   """
-  @spec param(atom(), atom() | {:array, atom()} | Keyword.t(), Keyword.t()) :: no_return()
+  @spec param(atom(), Commandex.Type.t() | Keyword.t(), Keyword.t()) :: no_return()
   defmacro param(name, type_or_opts \\ :any, opts \\ []) do
     quote do
       Commandex.__param__(__MODULE__, unquote(name), unquote(type_or_opts), unquote(opts))
@@ -450,9 +529,10 @@ defmodule Commandex do
   @doc """
   Halts the command if any errors are present.
 
-  This is automatically called before pipelines run to catch any casting
-  or required validation errors from `new/1`. It can also be used explicitly
-  as a pipeline gate to aggregate custom validation errors before continuing.
+  `new/1` calls this after it casts the parameters, so a command with a
+  cast error or a missing required parameter does not run any pipelines.
+  It can also be used as a pipeline to collect custom validation errors
+  before the command continues.
 
       command do
         param :email, :string, required: true
@@ -512,7 +592,7 @@ defmodule Commandex do
   end
 
   @doc false
-  @spec __param__(module(), atom(), atom() | {:array, atom()} | Keyword.t(), Keyword.t()) :: :ok
+  @spec __param__(module(), atom(), Commandex.Type.t() | Keyword.t(), Keyword.t()) :: :ok
   def __param__(mod, name, type_or_opts, opts)
 
   def __param__(mod, name, opts, []) when is_list(opts) do
@@ -526,7 +606,7 @@ defmodule Commandex do
       raise ArgumentError, "param #{inspect(name)} is already set on command"
     end
 
-    Module.put_attribute(mod, :params, {name, {type, opts}})
+    Module.put_attribute(mod, :params, {name, Commandex.Parameter.define!(name, type, opts)})
   end
 
   @doc false
@@ -565,33 +645,5 @@ defmodule Commandex do
 
   def __pipeline__(_mod, name) do
     raise ArgumentError, "pipeline #{inspect(name)} is not valid"
-  end
-
-  @doc false
-  @spec type_to_spec(atom() | {:array, atom()}) :: Macro.t()
-  def type_to_spec(:any), do: quote(do: term())
-  def type_to_spec(:string), do: quote(do: String.t() | nil)
-  def type_to_spec(:integer), do: quote(do: integer() | nil)
-  def type_to_spec(:float), do: quote(do: float() | nil)
-  def type_to_spec(:boolean), do: quote(do: boolean() | nil)
-
-  def type_to_spec({:array, inner_type}) do
-    inner = type_to_spec_inner(inner_type)
-    quote(do: [unquote(inner)] | nil)
-  end
-
-  def type_to_spec(module) when is_atom(module) do
-    quote(do: unquote(module).t() | nil)
-  end
-
-  @spec type_to_spec_inner(atom()) :: Macro.t()
-  defp type_to_spec_inner(:any), do: quote(do: term())
-  defp type_to_spec_inner(:string), do: quote(do: String.t())
-  defp type_to_spec_inner(:integer), do: quote(do: integer())
-  defp type_to_spec_inner(:float), do: quote(do: float())
-  defp type_to_spec_inner(:boolean), do: quote(do: boolean())
-
-  defp type_to_spec_inner(module) when is_atom(module) do
-    quote(do: unquote(module).t())
   end
 end

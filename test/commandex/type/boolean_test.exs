@@ -13,11 +13,14 @@ defmodule Commandex.Type.BooleanTest do
     assert BooleanType.cast("false") == {:ok, false}
   end
 
-  test "casts numeric booleans" do
-    assert BooleanType.cast(1) == {:ok, true}
-    assert BooleanType.cast(0) == {:ok, false}
+  test "casts numeric string booleans" do
     assert BooleanType.cast("1") == {:ok, true}
     assert BooleanType.cast("0") == {:ok, false}
+  end
+
+  test "rejects integers" do
+    assert BooleanType.cast(1) == :error
+    assert BooleanType.cast(0) == :error
   end
 
   test "casts atom booleans" do

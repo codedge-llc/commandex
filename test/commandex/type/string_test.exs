@@ -7,19 +7,17 @@ defmodule Commandex.Type.StringTest do
     assert StringType.cast("hello") == {:ok, "hello"}
   end
 
-  test "casts atoms" do
-    assert StringType.cast(:hello) == {:ok, "hello"}
+  test "rejects atoms" do
+    assert StringType.cast(:hello) == :error
+    assert StringType.cast(true) == :error
   end
 
-  test "casts integers" do
-    assert StringType.cast(42) == {:ok, "42"}
+  test "rejects numbers" do
+    assert StringType.cast(42) == :error
+    assert StringType.cast(3.14) == :error
   end
 
-  test "casts floats" do
-    assert StringType.cast(3.14) == {:ok, "3.14"}
-  end
-
-  test "rejects non-stringable types" do
+  test "rejects other types" do
     assert StringType.cast({:tuple}) == :error
     assert StringType.cast([1, 2]) == :error
   end

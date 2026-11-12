@@ -12,8 +12,10 @@ defmodule Commandex.Type.IntegerTest do
     assert IntegerType.cast("-10") == {:ok, -10}
   end
 
-  test "casts floats by truncating" do
-    assert IntegerType.cast(3.9) == {:ok, 3}
+  test "rejects floats" do
+    assert IntegerType.cast(3.9) == :error
+    assert IntegerType.cast(3.0) == :error
+    assert IntegerType.cast("3.0") == :error
   end
 
   test "rejects non-numeric strings" do

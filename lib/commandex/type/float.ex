@@ -1,6 +1,9 @@
 defmodule Commandex.Type.Float do
   @moduledoc """
   Casts values to floats.
+
+  Accepts a float, an integer, or a string that holds a number, such as
+  `"1.5"`.
   """
 
   @behaviour Commandex.Type
