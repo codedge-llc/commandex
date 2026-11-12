@@ -2,7 +2,7 @@ defmodule Commandex.MixProject do
   use Mix.Project
 
   @source_url "https://github.com/codedge-llc/commandex"
-  @version "0.5.2"
+  @version "0.6.0"
 
   def project do
     [

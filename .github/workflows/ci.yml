@@ -29,8 +29,8 @@ jobs:
       - name: Set up Elixir
         uses: erlef/setup-beam@v1
         with:
-          elixir-version: "1.19"
-          otp-version: "28"
+          elixir-version: "1.20"
+          otp-version: "29"
       - name: Restore dependencies cache
         uses: actions/cache@v6
         with:
@@ -46,13 +46,16 @@ jobs:
   dialyzer:
     name: Dialyzer
     runs-on: ubuntu-latest
+    env:
+      ELIXIR_VERSION: "1.20"
+      OTP_VERSION: "29"
     steps:
       - uses: actions/checkout@v7
       - name: Set up Elixir
         uses: erlef/setup-beam@v1
         with:
-          elixir-version: "1.19"
-          otp-version: "28"
+          elixir-version: ${{ env.ELIXIR_VERSION }}
+          otp-version: ${{ env.OTP_VERSION }}
       - name: Restore dependencies cache
         uses: actions/cache@v6
         with:
@@ -63,8 +66,8 @@ jobs:
         uses: actions/cache@v6
         with:
           path: priv/plts
-          key: ${{ runner.os }}-mix-plts-${{ hashFiles('./priv/plts/') }}
-          restore-keys: ${{ runner.os }}-mix-plts-
+          key: ${{ runner.os }}-plt-${{ env.ELIXIR_VERSION }}-${{ env.OTP_VERSION }}-${{ hashFiles('**/mix.lock') }}
+          restore-keys: ${{ runner.os }}-plt-${{ env.ELIXIR_VERSION }}-${{ env.OTP_VERSION }}-
       - name: Install dependencies
         run: mix deps.get
       - name: Run dialyzer
